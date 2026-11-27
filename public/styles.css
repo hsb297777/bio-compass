@@ -137,6 +137,9 @@ legend small { color: var(--muted); font-size: .76rem; margin-left: .25rem; font
 .curriculum { border-left: 2px solid var(--line); margin-top: .55rem; padding: .25rem .6rem; }
 .curriculum h4 { font-size: .88rem; }
 .paper .paper-verdict { width: fit-content; background: var(--pale); padding: .2rem .5rem; border-radius: 5px; font-weight: 700; }
+.paper-stars { display: inline-block; margin-inline-end: .2rem; font-size: 1rem; letter-spacing: .08em; }
+.paper-star-filled { color: #8a5308; }
+.paper-star-empty { color: #5f7084; }
 .paper-verdict[data-fit="direct"], .paper-verdict[data-fit="background"] { color: #235446; }
 .plan-section label:first-of-type { margin-top: .35rem; }
 .plan-section label small { color: var(--slate); margin-left: .25rem; font-size: .78rem; font-weight: 500; }
