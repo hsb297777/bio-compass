@@ -14,6 +14,7 @@ const suggestionCache = new Map()
 let suggestionsTimer
 let suggestionsRequest
 let selectedPaperSuggestion
+let originalPaperQuestion
 const planResults = byId('plan-results')
 const welcome = messages.firstElementChild.cloneNode(true)
 const kindNames = { literature: '문헌 탐구형', experiment: '실험 탐구형', data: '데이터 분석형' }
@@ -145,6 +146,23 @@ function addSources(container, sources) {
   container.append(details)
 }
 
+function curriculumLabel(standard) {
+  return `${standard.subject} / ${standard.unit} (${standard.code})`
+}
+
+function addCurriculum(container, standard, heading) {
+  if (!standard) return
+  const block = element('section', 'curriculum')
+  const source = element('a', 'metadata', '교육부 교육과정 원문')
+  source.href = standard.source
+  source.target = '_blank'
+  source.rel = 'noopener noreferrer'
+  block.append(element('h4', '', heading), element('p', '', curriculumLabel(standard)),
+    element('p', '', '교과 개념: ' + standard.concept),
+    element('p', '', '이 주제에 쓰는 방법: ' + standard.reason), source)
+  container.append(block)
+}
+
 function addTopics(container, topics) {
   container.append(element('p', '', '관심 있는 주제에서 ‘이 주제 선택’을 누르면 논문 검색창으로 이동해요. 추천 검색어를 누르거나 검색 버튼을 눌러 논문을 찾아보세요.'))
   const group = element('div', 'topic-list')
@@ -156,19 +174,22 @@ function addTopics(container, topics) {
     const card = element('article', 'topic')
     card.append(element('p', 'topic-kind', kindNames[option.kind]),
       element('h3', '', option.title),
-      element('p', '', '탐구 질문 · ' + option.question),
-      element('p', '', '관련 개념 · ' + option.concepts),
-      element('p', '', '추천 이유 · ' + option.reason),
-      element('p', '', '난이도 · ' + option.difficulty))
+      element('p', '', '탐구 질문: ' + option.question),
+      element('p', '', '관련 개념: ' + option.concepts),
+      element('p', '', '추천 이유: ' + option.reason),
+      element('p', '', '난이도: ' + option.difficulty))
+    addCurriculum(card, option.curriculum, '교육과정 연결')
     const select = element('button', 'button secondary', '이 주제 선택')
     select.type = 'button'
     select.addEventListener('click', () => {
       if (busy) return
       topic = option.title
-      openPaperSearch(option.title)
-      if (!byId('plan-title').value) byId('plan-title').value = option.title.slice(0, 180)
-      if (!planKind.value) {
-        planKind.value = option.kind
+      openPaperSearch(option.title, option.question)
+      const title = byId('plan-title')
+      if (!title.value) {
+        title.value = option.title.slice(0, 180)
+        setPlanCurriculum(option.curriculum)
+        if (!planKind.value) planKind.value = option.kind
         updatePlanType()
       }
     })
@@ -178,24 +199,30 @@ function addTopics(container, topics) {
   container.append(group)
 }
 
-function addReply(target, response) {
+function addReply(target, response, task) {
   const container = element('article', 'message')
-  container.append(element('p', 'message-title', response.safety ? '안전 안내' : 'Compass AI'))
+  if (!response.safety && (task === 'plan' || task === 'design')) {
+    container.append(element('h3', 'message-title', task === 'plan' ? '탐구 계획 보완' : '탐구 설계'),
+      element('p', 'ai-note', '(AI 제안)'))
+  } else {
+    container.append(element('p', 'message-title', response.safety ? '안전 안내' : 'Compass AI'))
+  }
   if (response.text) container.append(markdown(response.text))
   if (response.topics) addTopics(container, response.topics)
   if (response.reviews) {
     const group = element('div', 'topic-list')
     for (const review of response.reviews) {
       const card = element('section', 'review')
-      const score = review.score === undefined ? '' : review.score === null ? ' · 추가 정보 필요' : ' · ' + review.score + '점'
+      const score = review.score === undefined ? '' : review.score === null ? ': 추가 정보 필요' : ': ' + review.score + '점'
       card.append(element('h3', '', review.criterion + score),
-        element('p', '', '잘한 점 · ' + review.strength),
-        element('p', '', '개선 방향 · ' + review.improvement))
-      if (review.evidence) card.append(element('p', '', '평가 근거 · ' + review.evidence))
+        element('p', '', '잘한 점: ' + review.strength),
+        element('p', '', '개선 방향: ' + review.improvement))
+      if (review.evidence) card.append(element('p', '', '평가 근거: ' + review.evidence))
       group.append(card)
     }
     container.append(group)
   }
+  addCurriculum(container, response.curriculum, '교육과정 연결 제안')
   addSources(container, response.sources)
   target.append(container)
   if (target === messages) {
@@ -212,7 +239,7 @@ async function chat(task, text, profile, target = messages) {
   try {
     const response = await api('chat', { task, text, profile }).then(res => res.json())
     if (target !== messages) target.replaceChildren()
-    addReply(target, response)
+    addReply(target, response, task)
     if (task === 'topics' && response.topics?.length === 3) progress(1)
     if (task === 'design' && !response.safety) progress(3)
     if (task === 'evaluate' && response.reviews) progress(3)
@@ -242,8 +269,8 @@ profileForm.addEventListener('submit', event => {
   }
   panel('chat')
   const text = [
-    '학년 · ' + profile.grade, '진로 희망 · ' + profile.career, '관심사 · ' + profile.interests,
-    '탐구 장소 · ' + profile.places.join(', '), '기간 · ' + profile.period
+    '학년: ' + profile.grade, '진로 희망: ' + profile.career, '관심사: ' + profile.interests,
+    '탐구 장소: ' + profile.places.join(', '), '기간: ' + profile.period
   ].join('\n')
   chat('topics', text, profile)
 })
@@ -294,8 +321,11 @@ byId('reset-chat').addEventListener('click', async () => {
     clearSuggestions()
     suggestionCache.clear()
     selectedPaperSuggestion = undefined
+    originalPaperQuestion = undefined
     paperForm.reset()
     planForm.reset()
+    setPlanCurriculum()
+    for (const [index, step] of [...planForm.querySelectorAll('.plan-step')].entries()) step.open = index === 0
     updatePlanType()
     progress(0, true)
   } catch (error) {
@@ -314,8 +344,9 @@ function clearSuggestions() {
   suggestionsStatus.textContent = ''
 }
 
-function openPaperSearch(text) {
+function openPaperSearch(text, question) {
   selectedPaperSuggestion = undefined
+  originalPaperQuestion = question?.slice(0, paperQuery.maxLength)
   paperQuery.value = text.slice(0, paperQuery.maxLength)
   searchResults.replaceChildren()
   panel('papers')
@@ -332,7 +363,7 @@ function showSuggestions(suggestions) {
     button.type = 'button'
     button.addEventListener('click', () => {
       if (busy) return
-      selectedPaperSuggestion = suggestion
+      selectedPaperSuggestion = { ...suggestion, topic: originalPaperQuestion || paperQuery.value.trim() }
       paperQuery.value = suggestion.label
       paperQuery.focus()
       paperForm.requestSubmit()
@@ -370,6 +401,7 @@ function updateSuggestions(delay = 800) {
 
 paperQuery.addEventListener('input', event => {
   selectedPaperSuggestion = undefined
+  originalPaperQuestion = undefined
   searchResults.replaceChildren()
   if (!event.isComposing) updateSuggestions()
   else clearSuggestions()
@@ -396,7 +428,7 @@ function addPaper(result) {
   const card = element('article', 'paper')
   const title = element('h3', '', result.title)
   const authors = result.authors.join(', ') + (result.moreAuthors ? ' 외' : '')
-  card.append(title, element('p', 'metadata', (authors || '저자 정보 없음') + ' · ' + (result.year || '연도 정보 없음')))
+  card.append(title, element('p', 'metadata', '저자: ' + (authors || '정보 없음') + ' / 연도: ' + (result.year || '정보 없음')))
   const link = element('a', 'metadata', result.doi ? 'DOI ' + result.doi.slice('https://doi.org/'.length) : 'OpenAlex에서 보기')
   link.href = result.doi || result.id
   link.target = '_blank'
@@ -405,7 +437,20 @@ function addPaper(result) {
   source.append(link)
   card.append(source)
   if (result.finding) card.append(element('p', '', result.finding))
-  if (result.relevance) card.append(element('p', '', '탐구 주제와의 관련성 · ' + result.relevance))
+  const labels = {
+    direct: '핵심 자료로 참고',
+    background: '배경 설명에 참고',
+    skip: '이 질문에서는 건너뛰기',
+    check: '원문 확인 후 판단'
+  }
+  const reading = result.reading
+  const verdict = element('p', 'paper-verdict', '활용 판단: ' + (labels[reading?.fit] || labels.check))
+  verdict.dataset.fit = reading?.fit || 'check'
+  card.append(verdict)
+  if (reading?.relevance) card.append(element('p', '', '연결 이유: ' + reading.relevance))
+  if (reading?.use) card.append(element('p', '', '어디에 쓸까: ' + reading.use))
+  if (reading?.caution) card.append(element('p', '', '읽을 때 확인할 점: ' + reading.caution))
+  if (!reading) card.append(element('p', '', '원문에서 내 질문과 같은 대상이나 결과를 다루는지 먼저 확인해 보세요.'))
   if (result.abstract) {
     const details = element('details')
     details.append(element('summary', '', 'OpenAlex 초록 보기'), element('p', '', result.abstract))
@@ -421,13 +466,13 @@ paperForm.addEventListener('submit', async event => {
   if (busy) return
   const displayQuery = paperQuery.value.trim()
   if (!displayQuery) return
-  const query = selectedPaperSuggestion?.label === displayQuery ? selectedPaperSuggestion.query : displayQuery
+  const picked = selectedPaperSuggestion?.label === displayQuery ? selectedPaperSuggestion : undefined
   clearSuggestions()
   paperQuery.readOnly = true
   setBusy(true)
   searchResults.replaceChildren(element('p', 'loading', 'OpenAlex에서 실제 논문을 찾고 있어요.'))
   try {
-    const response = await api('papers', { query, recent: byId('recent').checked }).then(res => res.json())
+    const response = await api('papers', { query: picked?.query || displayQuery, topic: picked?.topic || originalPaperQuestion, recent: byId('recent').checked }).then(res => res.json())
     searchResults.replaceChildren()
     if (response.message) {
       searchResults.append(element('p', '', response.message))
@@ -437,7 +482,7 @@ paperForm.addEventListener('submit', async event => {
       searchResults.append(element('p', '', '이 검색어로 찾은 논문이 없어요. 핵심 단어 두세 개로 줄여 다시 검색해 보세요.'))
       return
     }
-    const subtitle = `검색어 · ${displayQuery}${response.from ? ' / ' + response.from + ' 이후' : ''}`
+    const subtitle = `검색어: ${displayQuery}${response.from ? ' / ' + response.from + ' 이후' : ''}`
     searchResults.append(element('p', 'metadata', subtitle))
     for (const paper of response.papers) addPaper(paper)
     progress(2)
@@ -489,10 +534,45 @@ function updatePlanType() {
   byId('plan-analysis-hint').textContent = guidance.analysis
   byId('plan-variables').hidden = type !== 'experiment'
   byId('plan-standard-group').hidden = type === 'experiment'
+  updatePlanChecklist()
+}
+
+function setPlanCurriculum(standard) {
+  const hint = byId('plan-curriculum-suggest')
+  hint.hidden = !standard
+  hint.replaceChildren()
+  if (!standard) return
+  hint.append(element('strong', '', curriculumLabel(standard)),
+    element('span', 'ai-note', '(AI 제안)'), document.createTextNode(standard.reason))
+}
+
+function updatePlanChecklist() {
+  const filled = (...fields) => fields.every(field => byId('plan-' + field).value.trim())
+  const comparison = planKind.value === 'experiment'
+    ? filled('independent', 'dependent', 'controlled')
+    : filled('standard')
+  const missing = [
+    [filled('curriculum'), '교과 연결'],
+    [filled('expectation'), '예상과 그 이유'],
+    [comparison && filled('method', 'analysis'), '비교·진행·기록 방법'],
+    [filled('material', 'schedule'), '준비물·자료와 일정'],
+    [filled('safety'), '안전과 자료 사용']
+  ].filter(([complete]) => !complete).map(([, label]) => label)
+  byId('plan-missing').textContent = missing.length
+    ? '아직 확인할 내용: ' + missing.join(', ')
+    : '평가에 필요한 칸을 채웠어요. 계획서 평가에서 내용을 확인해 보세요.'
 }
 
 planKind.addEventListener('change', updatePlanType)
-planForm.addEventListener('input', () => planResults.replaceChildren())
+planForm.addEventListener('input', event => {
+  if (event.target.id === 'plan-title') setPlanCurriculum()
+  updatePlanChecklist()
+  planResults.replaceChildren()
+})
+planForm.addEventListener('invalid', event => {
+  const step = event.target.closest('.plan-step')
+  if (step) step.open = true
+}, true)
 for (const [id, message] of [['plan-title', '탐구 제목을 적어 주세요.'], ['plan-question', '알아보고 싶은 질문을 적어 주세요.']]) {
   const field = byId(id)
   field.addEventListener('input', () => field.setCustomValidity(field.value && !field.value.trim() ? message : ''))
@@ -505,6 +585,7 @@ function planData() {
   const fields = [
     ['탐구 질문', byId('plan-question').value],
     ['이 주제를 고른 이유', byId('plan-reason').value],
+    ['수업에서 배운 개념과 연결', byId('plan-curriculum').value],
     [planGuidance[type].expectation[0], byId('plan-expectation').value],
     ...(type === 'experiment' ? [
       ['바꿀 조건 (독립 변인)', byId('plan-independent').value],

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { after, before, test } from 'node:test'
-import { structuredReply } from '../server/domain.js'
+import { structuredReply, paperReading } from '../server/domain.js'
 
 const testKey = 'development-only-test-key'
 const calls = []
@@ -179,4 +179,29 @@ test('topic recommendations show cards without reporting an unrun OpenAlex searc
   assert.equal(result.text, '')
   assert.deepEqual(result.topics, topics.map(topic => ({ ...topic, searchQueries: ['household microplastic exposure'] })))
   assert.match(structuredReply('topics', oldSummary).text, /맞춤 탐구 시작하기/)
+})
+
+
+test('curriculum links use the reviewed subject and unit for a recognized code', () => {
+  const topic = { title: '하천과 수생 생물', question: '하천 환경에 따라 관찰되는 생물이 어떻게 다를까?',
+    concepts: '생태계', reason: '공개 관찰 자료를 비교해요.', difficulty: '보통' }
+  const match = { code: '10통과2-02-01', reason: '하천 환경과 생물의 관계를 비교해요.', subject: '임의 과목' }
+  const topics = [{ ...topic, kind: 'literature', curriculum: match },
+    { ...topic, kind: 'experiment', curriculum: { ...match, code: '10통과2-09-09' } },
+    { ...topic, kind: 'data' }]
+  const result = structuredReply('topics', JSON.stringify({ topics }))
+  assert.equal(result.topics[0].curriculum.subject, '통합과학2')
+  assert.equal(result.topics[0].curriculum.unit, '환경과 에너지')
+  assert.equal(result.topics[0].curriculum.reason, match.reason)
+  assert.equal(result.topics[1].curriculum, undefined)
+})
+
+test('paper reading advice requires an abstract before recommending use', () => {
+  const relevance = '같은 조건의 발아율을 비교해요.'
+  const use = '비교 조건을 정할 때 참고할 수 있어요.'
+  const note = { fit: 'direct', relevance, use }
+  assert.deepEqual(paperReading(note, true), { fit: 'direct', relevance, use, caution: '' })
+  assert.deepEqual(paperReading(note, false), { fit: 'check', relevance, use: '', caution: '' })
+  assert.equal(paperReading({ fit: 'skip', relevance, use }, true).use, '')
+  assert.equal(paperReading({ fit: 'direct' }, true), null)
 })

@@ -125,8 +125,19 @@ legend small { color: var(--muted); font-size: .76rem; margin-left: .25rem; font
 .paper summary { cursor: pointer; color: var(--blue); }
 .sources { border-top: 1px solid var(--line); margin-top: .7rem; padding-top: .6rem; }
 .plan-intro { color: var(--slate); font-size: .9rem; margin-top: .35rem; }
-.plan-section { border: 1px solid var(--line); border-radius: 8px; padding: .25rem .8rem .75rem; margin-top: 1.15rem; }
-.plan-section legend { padding: 0 .35rem; color: var(--blue); }
+.plan-step, .plan-checklist { border: 1px solid var(--line); border-radius: 8px; margin-top: .6rem; }
+.plan-step > summary, .plan-checklist > summary { padding: .65rem .8rem; color: var(--blue); font-weight: 700; cursor: pointer; }
+.plan-checklist { background: var(--pale); }
+.plan-checklist ul { padding: 0 .85rem .7rem 1.85rem; font-size: .85rem; }
+.plan-checklist li + li { margin-top: .25rem; }
+.plan-section { border: 0; min-width: 0; padding: 0 .8rem .65rem; }
+.plan-section textarea { padding-block: .4rem; line-height: 1.4; }
+.plan-curriculum-suggest { background: var(--pale); border-radius: 6px; padding: .45rem .6rem; font-size: .85rem; }
+.ai-note { display: block; color: var(--slate); font-size: .8rem; }
+.curriculum { border-left: 2px solid var(--line); margin-top: .55rem; padding: .25rem .6rem; }
+.curriculum h4 { font-size: .88rem; }
+.paper .paper-verdict { width: fit-content; background: var(--pale); padding: .2rem .5rem; border-radius: 5px; font-weight: 700; }
+.paper-verdict[data-fit="direct"], .paper-verdict[data-fit="background"] { color: #235446; }
 .plan-section label:first-of-type { margin-top: .35rem; }
 .plan-section label small { color: var(--slate); margin-left: .25rem; font-size: .78rem; font-weight: 500; }
 .plan-hint { color: var(--slate); margin: .25rem 0 .6rem; font-size: .82rem; }
