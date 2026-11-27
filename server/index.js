@@ -177,7 +177,7 @@ app.post('/api/chat', rate('chat', 10, 300000), async (req, res) => {
   const id = sessionId(req)
   const { task, text, profile } = req.body || {}
   if (!['chat', 'topics', 'design', 'evaluate', 'plan'].includes(task)) throw new PublicError(400, '지원하는 탐구 단계를 선택해 주세요.')
-  const message = task === 'topics' ? profileMessage(profile) : input(text, 6500)
+  const message = task === 'topics' ? profileMessage(profile) : input(text, task === 'chat' ? 6500 : 6682)
   if (needsSafetyRedirect(message)) return res.json({ text: safeReply, safety: true })
   const session = sessions.get(id) || { touched: Date.now() }
   if (session.busy) throw new PublicError(409, '이 대화의 답변이 아직 생성 중이에요.')
@@ -187,7 +187,8 @@ app.post('/api/chat', rate('chat', 10, 300000), async (req, res) => {
   sessions.set(id, session)
   try {
     const response = await threadReply(session, buildPrompt(task, message))
-    res.json({ ...structuredReply(task, response.text), sources: response.sources })
+    const reply = task === 'plan' ? clean(response.text, 12000) : response.text
+    res.json({ ...structuredReply(task, reply), sources: response.sources })
   } finally {
     session.touched = Date.now()
     session.busy = false
