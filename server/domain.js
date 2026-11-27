@@ -47,25 +47,30 @@ const dangerous = /(?:(?:병원체|병원성|독소|탄저|보툴리눔|바이�
 export const safeReply = '그 활동은 감염이나 생물안전 문제를 일으킬 수 있어 구체적인 실행 방법은 안내할 수 없어요. 공개된 자료로 감염 추이를 비교하거나, 식용 식물의 발아율을 비교하는 탐구로 바꿔 볼까요?'
 export const needsSafetyRedirect = text => dangerous.test(text)
 
-const paperQueryInstruction = 'OpenAlex에서 학술 논문을 찾을 때 쓸 자연스러운 영어 검색어를 추천한다. 관련성이 높은 표현 3개를 각각 2~7개 단어로 작성한다. 핵심 개념, 관련 기전, 연구 방법 등 서로 다른 관점을 고른다. 논문 제목이나 DOI는 만들지 않는다. 위험하거나 안전하지 않은 생물학 연구에 대한 구체적인 방법과 이를 찾는 검색어는 제시하지 않는다.'
+const paperQueryInstruction = '학생에게 보여 줄 쉬운 한국어 검색어 label과, OpenAlex에 보낼 같은 뜻의 영어 검색어 query를 한 쌍으로 3개 추천한다. label은 한국어로 된 짧은 구절, query는 자연스러운 영어 학술 검색어 2~7개 단어로 작성한다. 핵심 개념, 관련 기전, 연구 방법 등 서로 다른 관점을 고른다. 논문 제목이나 DOI는 만들지 않는다. 위험하거나 안전하지 않은 생물학 연구에 대한 구체적인 방법과 이를 찾는 검색어는 제시하지 않는다.'
 
-export function normalizePaperQueries(values) {
+export function normalizePaperSuggestions(values) {
   if (!Array.isArray(values)) return []
-  const queries = new Map()
+  const suggestions = []
+  const seenQueries = new Set()
+  const seenLabels = new Set()
   for (const value of values) {
-    const query = clean(value, 100).replace(/\s+/g, ' ')
-    if (!/^[a-z0-9-]+(?: [a-z0-9-]+){1,6}$/i.test(query) || !/[a-z]/i.test(query) || needsSafetyRedirect(query)) continue
-    const key = query.toLowerCase()
-    if (!queries.has(key)) queries.set(key, query)
-    if (queries.size === 3) break
+    const label = clean(value?.label, 80).replace(/\s+/g, ' ')
+    const query = clean(value?.query, 100).replace(/\s+/g, ' ')
+    if (!/[가-힣]/.test(label) || !/^[a-z0-9-]+(?: [a-z0-9-]+){1,6}$/i.test(query) || !/[a-z]/i.test(query)) continue
+    if (needsSafetyRedirect(label) || needsSafetyRedirect(query) || seenQueries.has(query.toLowerCase()) || seenLabels.has(label)) continue
+    suggestions.push({ label, query })
+    seenQueries.add(query.toLowerCase())
+    seenLabels.add(label)
+    if (suggestions.length === 3) break
   }
-  return [...queries.values()]
+  return suggestions
 }
 
 const formats = {
   chat: '학생의 질문에 바로 답한다. 어려운 개념은 쉬운 말로 설명한다. 논문을 찾으려는 학생에게는 논문 검색 탭에서 주제를 입력하고 추천 검색어를 고르거나 검색 버튼을 누르는 방법을 안내한다.',
-  paperQueries: paperQueryInstruction + ' JSON 객체만 출력한다. {"queries":[]}',
-  topics: paperQueryInstruction + ' 각 주제의 searchQueries 배열에 넣는다. 각 주제는 학생의 관심사와 여건에 맞추고 추천 이유는 학생이 이해할 수 있는 한두 문장으로 설명한다. 검색 상태, 도구 유무, 성취기준 번호를 카드에 쓰지 않는다. 다음 JSON만 출력한다. {"topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]}]}',
+  paperQueries: paperQueryInstruction + ' JSON 객체만 출력한다. {"suggestions":[{"label":"","query":""}]}',
+  topics: paperQueryInstruction + ' 각 주제의 searchSuggestions 배열에 넣는다. 각 주제는 학생의 관심사와 여건에 맞추고 추천 이유는 학생이 이해할 수 있는 한두 문장으로 설명한다. 검색 상태, 도구 유무, 성취기준 번호를 카드에 쓰지 않는다. 다음 JSON만 출력한다. {"topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","searchSuggestions":[{"label":"","query":""}]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","searchSuggestions":[{"label":"","query":""}]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","searchSuggestions":[{"label":"","query":""}]}]}',
   design: '가설, 변인 또는 비교 기준, 준비물, 방법, 자료 수집과 분석, 기간, 안전을 Markdown 제목과 표로 정리한다. 실제 데이터를 넣지 않는다.',
   evaluate: `다음 JSON만 출력한다. {"summary":"종합 의견","reviews":[{"criterion":"","score":null,"evidence":"","strength":"","improvement":""}]}. criterion은 다음 순서와 표기를 지킨다. ${criteria.join(' / ')}. 각각 한 번씩 쓴다. 평가 기준표가 검색되면 항목당 1~4점을 부여한다. 정보가 부족하면 score는 null로 두고 해당 평가를 보류한다. summary에는 안전 판정, 출처 유무, 점수 부여가 가능한 경우 총점과 종합 판정, 우선 수정 사항을 포함한다. 안전상 수행 불가인 실험을 승인하지 않는다.`,
   plan: '학생이 입력한 초안을 근거로 첫 단계부터 끝까지 계획에 도움이 될 AI 제안만 Markdown으로 정리한다. 학생의 원문은 복사하지 않는다. 자료 수집 전의 실험 결과는 쓰지 않는다.'
@@ -95,7 +100,8 @@ export function structuredReply(task, text) {
       const typed = { kind }
       for (const key of ['title', 'question', 'concepts', 'reason', 'difficulty']) typed[key] = clean(row[key], 650)
       if (!Object.values(typed).every(Boolean)) return null
-      return { ...typed, searchQueries: normalizePaperQueries(row.searchQueries) }
+      const searchSuggestions = normalizePaperSuggestions(row.searchSuggestions)
+      return { ...typed, searchSuggestions, searchQueries: searchSuggestions.map(({ query }) => query) }
     })
     return topics.every(Boolean) ? { text: '', topics } : { text: '주제 추천을 마치지 못했어요. 맞춤 탐구 시작하기를 다시 눌러 주세요.' }
   }
