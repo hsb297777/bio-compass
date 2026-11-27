@@ -436,17 +436,20 @@ function addPaper(result) {
   const source = element('p')
   source.append(link)
   card.append(source)
-  if (result.finding) card.append(element('p', '', result.finding))
-  const labels = {
-    direct: '핵심 자료로 참고',
-    background: '배경 설명에 참고',
-    skip: '이 질문에서는 건너뛰기',
-    check: '원문 확인 후 판단'
+  const ratings = {
+    direct: { score: 3, label: '핵심 자료로 참고' },
+    background: { score: 2, label: '배경 설명에 참고' },
+    skip: { score: 1, label: '이 질문에서는 건너뛰기' },
+    check: { score: null, label: '원문 확인 후 판단' }
   }
   const reading = result.reading
-  const verdict = element('p', 'paper-verdict', '활용 판단: ' + (labels[reading?.fit] || labels.check))
-  verdict.dataset.fit = reading?.fit || 'check'
+  const fit = reading?.fit || 'check'
+  const { score, label } = ratings[fit]
+  const rating = score === null ? '활용도 미정' : `활용도 ${score}/3`
+  const verdict = element('p', 'paper-verdict', `${rating}: ${label}`)
+  verdict.dataset.fit = fit
   card.append(verdict)
+  if (result.finding) card.append(element('p', '', result.finding))
   if (reading?.relevance) card.append(element('p', '', '연결 이유: ' + reading.relevance))
   if (reading?.use) card.append(element('p', '', '어디에 쓸까: ' + reading.use))
   if (reading?.caution) card.append(element('p', '', '읽을 때 확인할 점: ' + reading.caution))
@@ -483,7 +486,8 @@ paperForm.addEventListener('submit', async event => {
       return
     }
     const subtitle = `검색어: ${displayQuery}${response.from ? ' / ' + response.from + ' 이후' : ''}`
-    searchResults.append(element('p', 'metadata', subtitle))
+    searchResults.append(element('p', 'metadata', subtitle),
+      element('p', 'metadata', '활용도는 논문이 내 탐구 질문에 얼마나 도움이 되는지 3점 척도로 보여줘요.'))
     for (const paper of response.papers) addPaper(paper)
     progress(2)
   } catch (error) {
@@ -547,20 +551,22 @@ function setPlanCurriculum(standard) {
 }
 
 function updatePlanChecklist() {
-  const filled = (...fields) => fields.every(field => byId('plan-' + field).value.trim())
   const comparison = planKind.value === 'experiment'
-    ? filled('independent', 'dependent', 'controlled')
-    : filled('standard')
-  const missing = [
-    [filled('curriculum'), '교과 연결'],
-    [filled('expectation'), '예상과 그 이유'],
-    [comparison && filled('method', 'analysis'), '비교·진행·기록 방법'],
-    [filled('material', 'schedule'), '준비물·자료와 일정'],
-    [filled('safety'), '안전과 자료 사용']
-  ].filter(([complete]) => !complete).map(([, label]) => label)
-  byId('plan-missing').textContent = missing.length
-    ? '아직 확인할 내용: ' + missing.join(', ')
-    : '평가에 필요한 칸을 채웠어요. 계획서 평가에서 내용을 확인해 보세요.'
+    ? ['independent', 'dependent', 'controlled']
+    : ['standard']
+  const fields = [
+    'title', 'question', 'curriculum', 'expectation', ...comparison,
+    'material', 'method', 'analysis', 'schedule', 'safety'
+  ]
+  const next = fields.find(id => !byId('plan-' + id).value.trim())
+  const status = byId('plan-missing')
+  if (!next) {
+    status.textContent = '평가에 필요한 칸을 채웠어요. ‘계획서 평가’를 눌러 피드백을 받아 보세요.'
+    return
+  }
+  const field = byId('plan-' + next)
+  const label = field.labels[0].firstChild.textContent.trim()
+  status.textContent = '다음에 채워 볼 칸: ' + label
 }
 
 planKind.addEventListener('change', updatePlanType)
