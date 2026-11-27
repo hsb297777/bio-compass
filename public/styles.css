@@ -113,6 +113,12 @@ legend small { color: var(--muted); font-size: .76rem; margin-left: .25rem; font
 .topic .button { margin-top: .65rem; }
 .task-pane { padding: 1.25rem 1.35rem; }
 .field-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .55rem; }
+.paper-suggestions { margin-top: .5rem; border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+.paper-suggestions > p { color: var(--slate); font-size: .82rem; font-weight: 700; padding: .55rem .75rem .15rem; }
+.paper-suggestions ul { list-style: none; padding: .15rem .35rem .35rem; margin: 0; }
+.paper-suggestions button { display: block; width: 100%; min-height: 44px; background: transparent; border: 0; border-radius: 5px; text-align: left; color: var(--ink); padding: .45rem .45rem; overflow-wrap: anywhere; }
+.paper-suggestions button:hover, .paper-suggestions button:focus-visible { background: var(--pale); }
+.suggestion-status:not(:empty) { margin-top: .45rem; }
 .recent { margin-block: .55rem; }
 .paper-results, #plan-results { margin-top: 1rem; display: grid; gap: .65rem; overflow-wrap: anywhere; }
 .paper details { margin-top: .5rem; font-size: .88rem; }
