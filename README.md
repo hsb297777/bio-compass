@@ -29,7 +29,7 @@ npm start
 1. AnythingLLM 관리자 페이지에 로그인합니다. Railway 설치라면 **AnythingLLM → Variables → AUTH_TOKEN**의 설정값을 로그인 화면에 붙여넣습니다.
 2. 기존 작업방을 재사용하는 경우 주소에서 `/workspace/` 뒤의 값이 연결 이름입니다. Bio Compass의 기존 작업방은 `biocompass`입니다. 새로운 설치에서 `bio-compass`를 쓰는 경우 환경변수도 같은 값으로 설정합니다.
 3. 작업방 **채팅 설정**에서 **OpenAI → gpt-6.2-sol**을 선택하고 수업 Padlet 키를 입력합니다. 모델이 Temperature를 지원할 때 **0.7**을 입력합니다. 기존 `gpt-6.2-sol`은 Temperature를 보내면 오류가 발생해 기본값을 사용합니다. [시스템 프롬프트](server/workspace-prompt.md)를 붙여넣고 저장합니다. 키는 채팅, 소스코드, GitHub에 붙여넣지 않습니다.
-4. 첫 임베딩 전에 **설정 → Text Splitter & Chunking**에서 크기 **1000**, 겹침 **200**을 저장합니다. 작업방 **Vector Database**에서 **Accuracy Optimized**, 최대 문맥 조각 **4**, 문서 유사도 **Medium**을 선택합니다. Accuracy Optimized는 이 버전에서 LanceDB를 사용합니다.
+4. 첫 임베딩 전에 **설정 → Text Splitter & Chunking**에서 크기 **1000**, 겹침 **200**을 저장합니다. 작업방 **Vector Database**에서 **Accuracy Optimized**, 최대 문맥 조각 **4**, 문서 유사도 **Medium**을 선택합니다. Accuracy Optimized는 이 버전에서 LanceDB를 사용합니다. 재정렬 도중 연결이 반복적으로 끊긴 운영 인스턴스는 기본 검색 방식을 사용합니다.
 5. `multilingual-e5-small`은 한국어와 영어를 함께 처리할 수 있는 모델입니다. 현재 서비스의 기본 내장 임베딩 모델 목록에서 선택할 수 있는지 먼저 확인합니다. 선택할 수 없다면 현재 임베더로 검색 품질을 확인하거나 수업에서 승인한 다국어 임베딩 서비스에 연결합니다. 임베딩 모델을 바꾸면 동일한 모델로 검색이 가능하도록 문서 4개를 다시 임베딩합니다.
 6. 수업 자료 `교육과정_생명과학.md`, `탐구설계_가이드.md`, `탐구평가_기준표.md`, `실험안전_윤리.md`를 업로드하고 네 파일을 선택한 뒤 **Move to Workspace → Save and Embed**를 누릅니다.
 7. **설정 → 도구 → 개발자 API**에서 이 웹사이트용 키를 만듭니다. 테스트할 때만 사용하는 임시 작업방과 기존 학생 대화를 구분합니다.
@@ -61,7 +61,7 @@ npm start
 | `ANYTHINGLLM_WORKSPACE_SLUG` | 기존 작업방의 `biocompass` |
 | `ANYTHINGLLM_API_KEY` | 기존 AnythingLLM 설정에서 발급한 Developer API 키 |
 | `BIO_COMPASS_AI_ENABLED` | 수업 모델과 키를 확인한 후 `true` |
-| `BIO_COMPASS_KOREAN_RAG_FALLBACK` | 한국어 질의가 Medium에서 자료를 찾지 못하는 기존 내장 임베더 환경에서 `true`. 주제 추천·설계·평가·계획서에서 웹 서버가 해당 작업에 필요한 등록 자료 한 개를 직접 가져와 답변 근거로 함께 전달합니다. 작업방의 Medium 설정은 유지됩니다. |
+| `BIO_COMPASS_KOREAN_RAG_FALLBACK` | 한국어 질의가 Medium에서 자료를 찾지 못하는 기존 내장 임베더 환경에서 `true`. 주제 추천·설계·평가·계획서에서 웹 서버가 해당 작업에 필요한 등록 자료 한 개의 관련 발췌문을 검색해 답변 근거로 함께 전달합니다. 작업방의 Medium 설정은 유지됩니다. |
 | `OPENALEX_API_KEY` | OpenAlex 키. 학교에서 제공하거나 사용자 계정에서 발급한 경우 입력합니다. |
 | `BIO_COMPASS_AI_DAILY_LIMIT` | 웹 서비스 프로세스당 하루 AI 호출 상한. 기본 40회입니다. |
 | `TRUST_PROXY_HOPS` | Railway에서 프록시 한 대를 신뢰하는 설정인 `1`. 내 컴퓨터에서는 기본 `0`. |

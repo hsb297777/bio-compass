@@ -17,11 +17,12 @@ const key = process.env.ANYTHINGLLM_API_KEY
 const base = process.env.ANYTHINGLLM_URL?.replace(/\/+$/, '')
 const enabled = process.env.BIO_COMPASS_AI_ENABLED === 'true' && !!(base && key)
 const referenceFallback = process.env.BIO_COMPASS_KOREAN_RAG_FALLBACK === 'true'
+const designGuide = ['탐구설계_가이드.md', '좋은 탐구 질문 가설 독립변인 통제변인 수행 계획']
 const referenceFiles = {
-  topics: '교육과정_생명과학.md',
-  design: '탐구설계_가이드.md',
-  evaluate: '탐구평가_기준표.md',
-  plan: '탐구설계_가이드.md'
+  topics: ['교육과정_생명과학.md', '교육과정 적용 범위 2022 개정 교육과정 생명과학 성취기준'],
+  design: designGuide,
+  evaluate: ['탐구평가_기준표.md', '학생의 탐구 계획을 개선하기 위한 자체 형성평가 루브릭이다.'],
+  plan: designGuide
 }
 const workspace = '/api/v1/workspace/' + encodeURIComponent(slug)
 const sessions = new Map()
@@ -138,20 +139,18 @@ function sessionId(req) {
 }
 
 async function koreanReferences(task, message) {
-  const title = referenceFiles[task]
-  if (!referenceFallback || !title || !/[가-힣]/.test(message)) return []
+  const reference = referenceFiles[task]
+  if (!referenceFallback || !reference || !/[가-힣]/.test(message)) return []
+  const [title, query] = reference
   try {
-    const result = await anything(workspace, 'GET', undefined, 10000)
-    const work = Array.isArray(result.workspace) ? result.workspace[0] : result.workspace
-    const document = work?.documents?.find(row => {
-      const metadata = typeof row.metadata === 'string' ? parseObject(row.metadata) : row.metadata
-      return metadata?.title?.normalize('NFC') === title
-    })
-    const name = document?.docpath?.split('/').at(-1)
-    if (!name) return []
-    const record = await anything('/api/v1/document/' + encodeURIComponent(name), 'GET', undefined, 10000)
-    const excerpt = clean(record.document?.pageContent, 4200)
-    return excerpt ? [{ title, excerpt }] : []
+    const data = await anything(workspace + '/vector-search', 'POST', {
+      query, topN: 12, scoreThreshold: 0
+    }, 12000)
+    const chunks = Array.isArray(data.results) ? data.results
+      .filter(row => row.metadata?.title?.normalize('NFC') === title)
+      .slice(0, 4)
+      .map(row => clean(row.text, 1000)).filter(Boolean) : []
+    return chunks.length ? [{ title, excerpt: chunks.join('\n\n') }] : []
   } catch {
     return []
   }
