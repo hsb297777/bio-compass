@@ -1,6 +1,8 @@
 const byId = id => document.getElementById(id)
 const md = window.markdownit?.({ html: false, linkify: true })
 const profileForm = byId('profile-form')
+const planForm = byId('plan-form')
+const planKind = byId('plan-kind')
 const messages = byId('messages')
 const searchResults = byId('search-results')
 const paperForm = byId('search-form')
@@ -165,6 +167,10 @@ function addTopics(container, topics) {
       topic = option.title
       openPaperSearch(option.title)
       if (!byId('plan-title').value) byId('plan-title').value = option.title.slice(0, 180)
+      if (!planKind.value) {
+        planKind.value = option.kind
+        updatePlanType()
+      }
     })
     card.append(select)
     group.append(card)
@@ -289,7 +295,8 @@ byId('reset-chat').addEventListener('click', async () => {
     suggestionCache.clear()
     selectedPaperSuggestion = undefined
     paperForm.reset()
-    byId('plan-form').reset()
+    planForm.reset()
+    updatePlanType()
     progress(0, true)
   } catch (error) {
     showError(messages, error.message)
@@ -443,25 +450,100 @@ paperForm.addEventListener('submit', async event => {
   }
 })
 
+const planGuidance = {
+  '': {
+    expectation: ['예상 결과 또는 가설', '어떤 차이가 있을 것 같나요? 그렇게 생각한 이유도 한 줄 적어 보세요.'],
+    material: ['준비물 또는 참고 자료', '사용할 도구나 자료 이름을 적어 보세요.'],
+    method: '처음 할 일부터 차례대로 한 줄씩 적어 보세요.',
+    analysis: '무엇을 언제 기록할지, 표나 그래프로 어떻게 비교할지 써 보세요.'
+  },
+  literature: {
+    expectation: ['읽기 전에 예상하는 내용', '자료를 읽고 나면 어떤 공통점이나 차이를 발견할 것 같나요?'],
+    material: ['찾아볼 논문과 자료', '어떤 검색어로 찾을지, 자료를 어디에서 구할지 적어 보세요. 논문을 골랐다면 제목이나 링크를 적어도 좋아요.'],
+    method: '자료를 찾고, 골라서 읽고, 같은 기준으로 정리하는 순서를 적어 보세요.',
+    analysis: '예: 자료마다 연구 대상, 관찰한 결과, 연구의 한계를 표로 비교해요.'
+  },
+  experiment: {
+    expectation: ['가설', '예: 빛을 받는 시간이 달라지면 무순의 발아율도 달라질 것이다. 그렇게 예상한 이유를 덧붙여 보세요.'],
+    material: ['준비물', '필요한 물건, 개수, 측정 도구를 적어 보세요.'],
+    method: '무엇을 준비할지, 조건을 어떻게 나눌지, 언제 몇 번 관찰할지 차례대로 쓰세요.',
+    analysis: '예: 매일 같은 시각에 싹이 난 개수를 세고, 조건별 발아율을 그래프로 비교해요.'
+  },
+  data: {
+    expectation: ['데이터에서 예상하는 경향', '두 집단이나 기간 사이에 어떤 차이가 있을 것 같나요?'],
+    material: ['사용할 공개 데이터', '데이터 이름, 제공 기관, 확인할 기간이나 지역을 적어 보세요.'],
+    method: '데이터를 받을 곳, 사용할 항목, 빠진 값을 처리할 방법을 차례대로 적어 보세요.',
+    analysis: '예: 두 지역의 평균이나 변화 추이를 표와 그래프로 비교해요.'
+  }
+}
+
+function updatePlanType() {
+  const type = planKind.value
+  const guidance = planGuidance[type]
+  for (const field of ['expectation', 'material']) {
+    const [label, hint] = guidance[field]
+    byId('plan-' + field + '-label').textContent = label
+    byId('plan-' + field + '-hint').textContent = hint
+  }
+  byId('plan-method-hint').textContent = guidance.method
+  byId('plan-analysis-hint').textContent = guidance.analysis
+  byId('plan-variables').hidden = type !== 'experiment'
+  byId('plan-standard-group').hidden = type === 'experiment'
+}
+
+planKind.addEventListener('change', updatePlanType)
+planForm.addEventListener('input', () => planResults.replaceChildren())
+for (const [id, message] of [['plan-title', '탐구 제목을 적어 주세요.'], ['plan-question', '알아보고 싶은 질문을 적어 주세요.']]) {
+  const field = byId(id)
+  field.addEventListener('input', () => field.setCustomValidity(field.value && !field.value.trim() ? message : ''))
+  planForm.addEventListener('reset', () => field.setCustomValidity(''))
+}
+updatePlanType()
+
 function planData() {
-  return { title: byId('plan-title').value.trim(), student: byId('plan-body').value.trim() }
+  const type = planKind.value
+  const fields = [
+    ['탐구 질문', byId('plan-question').value],
+    ['이 주제를 고른 이유', byId('plan-reason').value],
+    [planGuidance[type].expectation[0], byId('plan-expectation').value],
+    ...(type === 'experiment' ? [
+      ['바꿀 조건 (독립 변인)', byId('plan-independent').value],
+      ['측정할 결과 (종속 변인)', byId('plan-dependent').value],
+      ['같게 둘 조건 (통제 변인)', byId('plan-controlled').value]
+    ] : [['비교할 대상과 기준', byId('plan-standard').value]]),
+    [planGuidance[type].material[0], byId('plan-material').value],
+    ['진행 순서', byId('plan-method').value],
+    ['기록할 내용과 비교 방법', byId('plan-analysis').value],
+    ['일정', byId('plan-schedule').value],
+    ['안전과 자료 사용에서 주의할 점', byId('plan-safety').value]
+  ]
+  if (type) fields.unshift(['탐구 유형', kindNames[type]])
+  const student = fields.filter(([, value]) => value.trim())
+    .map(([label, value]) => label + '\n' + value.trim()).join('\n\n')
+  return { title: byId('plan-title').value.trim(), student }
 }
 
 for (const button of document.querySelectorAll('[data-plan-task]')) {
   button.addEventListener('click', async () => {
-    if (busy || !byId('plan-form').reportValidity()) return
+    if (busy || !planForm.reportValidity()) return
     const task = button.dataset.planTask
     const { title, student } = planData()
     const content = [title, student].join('\n\n')
-    const reply = await chat(task, content, undefined, planResults)
-    if (task === 'plan' && reply?.text && !reply.safety) {
-      planSuggestion = reply.text
-      planSuggestionFor = content
+    const sections = [...planForm.querySelectorAll('fieldset')]
+    sections.forEach(section => { section.disabled = true })
+    try {
+      const reply = await chat(task, content, undefined, planResults)
+      if (task === 'plan' && reply?.text && !reply.safety) {
+        planSuggestion = reply.text
+        planSuggestionFor = content
+      }
+    } finally {
+      sections.forEach(section => { section.disabled = false })
     }
   })
 }
 
-byId('plan-form').addEventListener('submit', async event => {
+planForm.addEventListener('submit', async event => {
   event.preventDefault()
   const button = byId('pdf-button')
   if (button.disabled) return
