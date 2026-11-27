@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { after, before, test } from 'node:test'
+import { structuredReply } from '../server/domain.js'
 
 const testKey = 'development-only-test-key'
 const calls = []
@@ -150,4 +151,21 @@ test('paper query suggestions are deduplicated and generated outside the student
   const unsafe = await request(path, { query: '미확인 미생물 배양' }, session)
   assert.deepEqual(await unsafe.json(), { queries: [] })
   assert.equal(calls.length, previousCalls)
+})
+
+test('topic recommendations show cards without reporting an unrun OpenAlex search', () => {
+  const topics = ['literature', 'experiment', 'data'].map(kind => ({
+    kind,
+    title: '생활 속 미세플라스틱',
+    question: '공개 자료에서 어떤 항목을 비교할 수 있을까?',
+    concepts: '플라스틱과 환경',
+    reason: '집에서 공개 자료를 참고할 수 있어요.',
+    difficulty: '보통',
+    searchQueries: ['household microplastic exposure']
+  }))
+  const oldSummary = '현재 OpenAlex 검색 도구와 실제 검색 결과가 없어 논문은 확인하지 못했어요.'
+  const result = structuredReply('topics', JSON.stringify({ summary: oldSummary, topics }))
+  assert.equal(result.text, '')
+  assert.deepEqual(result.topics, topics)
+  assert.match(structuredReply('topics', oldSummary).text, /맞춤 탐구 시작하기/)
 })

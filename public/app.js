@@ -14,6 +14,12 @@ let suggestionsRequest
 const planResults = byId('plan-results')
 const welcome = messages.firstElementChild.cloneNode(true)
 const kindNames = { literature: '문헌 탐구형', experiment: '실험 탐구형', data: '데이터 분석형' }
+const taskProgress = {
+  topics: '프로필에 맞는 탐구 주제를 추천하고 있어요.',
+  design: '탐구 질문과 방법을 정리하고 있어요.',
+  evaluate: '계획서를 읽고 평가하고 있어요.',
+  plan: '계획서에 넣을 제안을 정리하고 있어요.'
+}
 let session = crypto.randomUUID()
 let busy = false
 let topic = ''
@@ -72,10 +78,12 @@ function panel(name) {
 
 for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => panel(tab.dataset.panel))
 
-function setBusy(value) {
+function setBusy(value, message) {
   busy = value
   for (const node of document.querySelectorAll('#profile-submit, #send, #reset-chat, [data-plan-task], #search-button')) node.disabled = value
-  byId('loading').hidden = !value || byId('chat').hidden
+  const loading = byId('loading')
+  loading.hidden = !value || byId('chat').hidden
+  if (value) loading.textContent = message || 'Compass AI가 답변을 준비하고 있어요.'
 }
 
 function showError(container, text) {
@@ -105,7 +113,7 @@ async function api(path, data, method = 'POST', signal) {
 
 async function status() {
   const indicator = byId('connection')
-  const labels = { connected: '연결 확인됨', unavailable: '연결 점검 필요', unconfigured: 'AI 설정 필요' }
+  const labels = { connected: 'AI 연결됨', unavailable: 'AI 연결 지연', unconfigured: 'AI 이용 불가' }
   try {
     const response = await fetch('/api/status')
     const { ai } = await response.json()
@@ -127,7 +135,7 @@ function addStudent(text) {
 function addSources(container, sources) {
   if (!sources?.length) return
   const details = element('details', 'sources')
-  details.append(element('summary', '', '참고 자료'))
+  details.append(element('summary', '', '이 답변에 참고한 자료'))
   const list = element('ul')
   for (const name of sources) list.append(element('li', '', name))
   details.append(list)
@@ -135,6 +143,7 @@ function addSources(container, sources) {
 }
 
 function addTopics(container, topics) {
+  container.append(element('p', '', '관심 있는 주제에서 ‘이 주제 선택’을 누르면 논문 검색창으로 이동해요. 추천 검색어를 누르거나 검색 버튼을 눌러 논문을 찾아보세요.'))
   const group = element('div', 'topic-list')
   for (const option of topics) {
     if (option.searchQueries?.length) {
@@ -173,7 +182,7 @@ function addReply(target, response) {
     const group = element('div', 'topic-list')
     for (const review of response.reviews) {
       const card = element('section', 'review')
-      const score = review.score === undefined ? '' : review.score === null ? ' · 평가 보류' : ' · ' + review.score + '점'
+      const score = review.score === undefined ? '' : review.score === null ? ' · 추가 정보 필요' : ' · ' + review.score + '점'
       card.append(element('h3', '', review.criterion + score),
         element('p', '', '잘한 점 · ' + review.strength),
         element('p', '', '개선 방향 · ' + review.improvement))
@@ -193,8 +202,8 @@ function addReply(target, response) {
 async function chat(task, text, profile, target = messages) {
   if (busy) return
   if (target === messages) addStudent(text)
-  else target.replaceChildren(element('p', 'loading', 'Compass AI가 답변을 준비하고 있어요.'))
-  setBusy(true)
+  else target.replaceChildren(element('p', 'loading', taskProgress[task]))
+  setBusy(true, taskProgress[task])
   try {
     const response = await api('chat', { task, text, profile }).then(res => res.json())
     if (target !== messages) target.replaceChildren()
@@ -269,7 +278,7 @@ byId('question').addEventListener('keydown', event => {
 
 byId('reset-chat').addEventListener('click', async () => {
   if (busy) return
-  setBusy(true)
+  setBusy(true, '대화를 초기화하고 있어요.')
   try {
     await api('session', undefined, 'DELETE')
     session = crypto.randomUUID()
@@ -333,7 +342,7 @@ function updateSuggestions(delay = 800) {
     if (busy) return
     const request = new AbortController()
     suggestionsRequest = request
-    suggestionsStatus.textContent = '학술 검색어를 추천하고 있어요…'
+    suggestionsStatus.textContent = '논문을 찾을 때 쓸 검색어를 준비하고 있어요…'
     try {
       const result = await api('papers/suggestions', { query }, 'POST', request.signal).then(res => res.json())
       if (request.signal.aborted) return
@@ -341,7 +350,7 @@ function updateSuggestions(delay = 800) {
       if (queries.length) suggestionCache.set(query, queries)
       showSuggestions(queries)
     } catch {
-      if (!request.signal.aborted) suggestionsStatus.textContent = '추천 검색어를 불러오지 못했어요. 입력한 주제로 바로 검색할 수 있어요.'
+      if (!request.signal.aborted) suggestionsStatus.textContent = '추천 검색어를 불러오지 못했어요. 현재 입력한 내용으로 검색하려면 검색 버튼을 눌러 주세요.'
     }
   }, delay)
 }
@@ -408,7 +417,7 @@ paperForm.addEventListener('submit', async event => {
       return
     }
     if (!response.papers.length) {
-      searchResults.append(element('p', '', '일치하는 논문이 없어요. 짧은 영어 학술 키워드로 다시 검색해 보세요.'))
+      searchResults.append(element('p', '', '이 검색어로 찾은 논문이 없어요. 영어 핵심 단어 몇 개로 줄여 다시 검색해 보세요.'))
       return
     }
     const subtitle = `검색어 · ${response.query}${response.from ? ' / ' + response.from + ' 이후' : ''}`
