@@ -445,9 +445,18 @@ function addPaper(result) {
   const reading = result.reading
   const fit = reading?.fit || 'check'
   const { score, label } = ratings[fit]
-  const rating = score === null ? '활용도 미정' : `활용도 ${score}/3`
-  const verdict = element('p', 'paper-verdict', `${rating}: ${label}`)
+  const verdict = element('p', 'paper-verdict')
   verdict.dataset.fit = fit
+  if (score === null) {
+    verdict.textContent = '활용도 미정: ' + label
+  } else {
+    const stars = element('span', 'paper-stars')
+    stars.setAttribute('aria-hidden', 'true')
+    stars.append(element('span', 'paper-star-filled', '★'.repeat(score)),
+      element('span', 'paper-star-empty', '☆'.repeat(3 - score)))
+    verdict.append(element('span', 'visually-hidden', `활용도 별 3개 중 ${score}개. `),
+      stars, document.createTextNode(' ' + label))
+  }
   card.append(verdict)
   if (result.finding) card.append(element('p', '', result.finding))
   if (reading?.relevance) card.append(element('p', '', '연결 이유: ' + reading.relevance))
@@ -487,7 +496,7 @@ paperForm.addEventListener('submit', async event => {
     }
     const subtitle = `검색어: ${displayQuery}${response.from ? ' / ' + response.from + ' 이후' : ''}`
     searchResults.append(element('p', 'metadata', subtitle),
-      element('p', 'metadata', '활용도는 논문이 내 탐구 질문에 얼마나 도움이 되는지 3점 척도로 보여줘요.'))
+      element('p', 'metadata', '채워진 별이 많을수록 내 탐구 질문에 직접 도움이 되는 논문이에요.'))
     for (const paper of response.papers) addPaper(paper)
     progress(2)
   } catch (error) {
