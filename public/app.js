@@ -3,6 +3,14 @@ const md = window.markdownit?.({ html: false, linkify: true })
 const profileForm = byId('profile-form')
 const messages = byId('messages')
 const searchResults = byId('search-results')
+const paperForm = byId('search-form')
+const paperQuery = byId('paper-query')
+const suggestionsPanel = byId('paper-suggestions')
+const suggestionsList = byId('suggestions-list')
+const suggestionsStatus = byId('suggestions-status')
+const suggestionCache = new Map()
+let suggestionsTimer
+let suggestionsRequest
 const planResults = byId('plan-results')
 const welcome = messages.firstElementChild.cloneNode(true)
 const kindNames = { literature: '문헌 탐구형', experiment: '실험 탐구형', data: '데이터 분석형' }
@@ -54,6 +62,7 @@ function progress(next, reset = false) {
 }
 
 function panel(name) {
+  if (name !== 'papers') clearSuggestions()
   for (const tab of document.querySelectorAll('.tab')) {
     const selected = tab.dataset.panel === name
     tab.setAttribute('aria-pressed', selected)
@@ -75,11 +84,12 @@ function showError(container, text) {
   container.append(error)
 }
 
-async function api(path, data, method = 'POST') {
+async function api(path, data, method = 'POST', signal) {
   let response
   try {
     response = await fetch('/api/' + path, {
       method,
+      signal,
       headers: { 'Content-Type': 'application/json', 'X-Bio-Session': session },
       body: data === undefined ? undefined : JSON.stringify(data)
     })
@@ -127,6 +137,10 @@ function addSources(container, sources) {
 function addTopics(container, topics) {
   const group = element('div', 'topic-list')
   for (const option of topics) {
+    if (option.searchQueries?.length) {
+      suggestionCache.set(option.title.slice(0, 200).trim(), option.searchQueries)
+      suggestionCache.set(option.question.slice(0, 200).trim(), option.searchQueries)
+    }
     const card = element('article', 'topic')
     card.append(element('p', 'topic-kind', kindNames[option.kind]),
       element('h3', '', option.title),
@@ -138,10 +152,11 @@ function addTopics(container, topics) {
     select.type = 'button'
     select.addEventListener('click', () => {
       topic = option.title
-      byId('paper-query').value = option.title.slice(0, 200)
+      paperQuery.value = option.title.slice(0, 200)
       if (!byId('plan-title').value) byId('plan-title').value = option.title.slice(0, 180)
       panel('papers')
-      byId('paper-query').focus()
+      paperQuery.focus()
+      updateSuggestions(0)
     })
     card.append(select)
     group.append(card)
@@ -237,9 +252,10 @@ byId('message-form').addEventListener('submit', event => {
   const text = field.value.trim()
   if (!text || busy) return
   if (/(논문|openalex).{0,20}(찾아|검색)|(?:찾아|검색).{0,20}(논문|openalex)/i.test(text)) {
-    byId('paper-query').value = text.length > 200 ? (topic || text.slice(0, 200)) : text
+    paperQuery.value = (text.length > 200 && topic ? topic : text).slice(0, 200)
     panel('papers')
-    byId('paper-query').focus()
+    paperQuery.focus()
+    updateSuggestions(0)
     return
   }
   chat('chat', text).then(response => { if (response && field.value.trim() === text) field.value = '' })
@@ -264,13 +280,91 @@ byId('reset-chat').addEventListener('click', async () => {
     searchResults.replaceChildren()
     planResults.replaceChildren()
     byId('question').value = ''
-    byId('search-form').reset()
+    clearSuggestions()
+    suggestionCache.clear()
+    paperForm.reset()
     byId('plan-form').reset()
     progress(0, true)
   } catch (error) {
     showError(messages, error.message)
   } finally {
     setBusy(false)
+  }
+})
+
+function clearSuggestions() {
+  clearTimeout(suggestionsTimer)
+  suggestionsRequest?.abort()
+  suggestionsRequest = undefined
+  suggestionsList.replaceChildren()
+  suggestionsPanel.hidden = true
+  suggestionsStatus.textContent = ''
+}
+
+function showSuggestions(queries) {
+  suggestionsPanel.hidden = queries.length === 0
+  suggestionsStatus.textContent = queries.length ? '' : '입력한 주제로 바로 검색할 수 있어요.'
+  for (const query of queries) {
+    const item = element('li')
+    const button = element('button', '', query)
+    button.type = 'button'
+    button.lang = 'en'
+    button.addEventListener('click', () => {
+      if (busy) return
+      paperQuery.value = query
+      paperQuery.focus()
+      paperForm.requestSubmit()
+    })
+    item.append(button)
+    suggestionsList.append(item)
+  }
+}
+
+function updateSuggestions(delay = 800) {
+  clearSuggestions()
+  const query = paperQuery.value.trim()
+  if (query.length < 3 || busy) return
+  const cached = suggestionCache.get(query)
+  if (cached) {
+    showSuggestions(cached)
+    return
+  }
+  suggestionsTimer = setTimeout(async () => {
+    if (busy) return
+    const request = new AbortController()
+    suggestionsRequest = request
+    suggestionsStatus.textContent = '학술 검색어를 추천하고 있어요…'
+    try {
+      const result = await api('papers/suggestions', { query }, 'POST', request.signal).then(res => res.json())
+      if (request.signal.aborted) return
+      const queries = Array.isArray(result.queries) ? result.queries : []
+      if (queries.length) suggestionCache.set(query, queries)
+      showSuggestions(queries)
+    } catch {
+      if (!request.signal.aborted) suggestionsStatus.textContent = '추천 검색어를 불러오지 못했어요. 입력한 주제로 바로 검색할 수 있어요.'
+    }
+  }, delay)
+}
+
+paperQuery.addEventListener('input', event => {
+  if (!event.isComposing) updateSuggestions()
+  else clearSuggestions()
+})
+paperQuery.addEventListener('compositionend', () => updateSuggestions())
+paperForm.addEventListener('keydown', event => {
+  if (event.isComposing) return
+  const buttons = [...suggestionsList.querySelectorAll('button')]
+  const index = buttons.indexOf(event.target)
+  if (event.key === 'Escape' && (!suggestionsPanel.hidden || suggestionsStatus.textContent)) {
+    clearSuggestions()
+    if (index >= 0) paperQuery.focus()
+  } else if (buttons.length && (index >= 0 || event.target === paperQuery)) {
+    const next = event.key === 'ArrowDown' ? buttons[index + 1] : event.key === 'ArrowUp' && index >= 0
+      ? (buttons[index - 1] || paperQuery) : null
+    if (next) {
+      event.preventDefault()
+      next.focus()
+    }
   }
 })
 
@@ -298,11 +392,12 @@ function addPaper(result) {
   searchResults.append(card)
 }
 
-byId('search-form').addEventListener('submit', async event => {
+paperForm.addEventListener('submit', async event => {
   event.preventDefault()
   if (busy) return
-  const query = byId('paper-query').value.trim()
+  const query = paperQuery.value.trim()
   if (!query) return
+  clearSuggestions()
   setBusy(true)
   searchResults.replaceChildren(element('p', 'loading', 'OpenAlex에서 실제 논문을 찾고 있어요.'))
   try {

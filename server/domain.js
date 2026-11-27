@@ -47,9 +47,25 @@ const dangerous = /(?:(?:병원체|병원성|독소|탄저|보툴리눔|바이�
 export const safeReply = '그 활동은 감염이나 생물안전 문제를 일으킬 수 있어 구체적인 실행 방법은 안내할 수 없어요. 공개된 자료로 감염 추이를 비교하거나, 식용 식물의 발아율을 비교하는 탐구로 바꿔 볼까요?'
 export const needsSafetyRedirect = text => dangerous.test(text)
 
+const paperQueryInstruction = 'OpenAlex에서 학술 논문을 찾을 때 쓸 자연스러운 영어 검색어를 추천한다. 관련성이 높은 표현 3개를 각각 2~7개 단어로 작성한다. 핵심 개념, 관련 기전, 연구 방법 등 서로 다른 관점을 고른다. 논문 제목이나 DOI는 만들지 않는다. 위험하거나 안전하지 않은 생물학 연구에 대한 구체적인 방법과 이를 찾는 검색어는 제시하지 않는다.'
+
+export function normalizePaperQueries(values) {
+  if (!Array.isArray(values)) return []
+  const queries = new Map()
+  for (const value of values) {
+    const query = clean(value, 100).replace(/\s+/g, ' ')
+    if (!/^[a-z0-9-]+(?: [a-z0-9-]+){1,6}$/i.test(query) || !/[a-z]/i.test(query) || needsSafetyRedirect(query)) continue
+    const key = query.toLowerCase()
+    if (!queries.has(key)) queries.set(key, query)
+    if (queries.size === 3) break
+  }
+  return [...queries.values()]
+}
+
 const formats = {
   chat: '질문에 답한다. Markdown 제목과 표를 사용할 수 있다. 논문 검색이 필요하면 웹앱의 논문 검색 버튼을 안내한다.',
-  topics: '다음 JSON만 출력한다. {"summary":"학생의 여건을 바탕으로 작성한 요약","topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":""},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":""},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":""}]}',
+  paperQueries: paperQueryInstruction + ' JSON 객체만 출력한다. {"queries":[]}',
+  topics: paperQueryInstruction + ' 각 주제의 searchQueries 배열에 넣는다. 다음 JSON만 출력한다. {"summary":"학생의 여건을 바탕으로 작성한 요약","topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]}]}',
   design: '가설, 변인 또는 비교 기준, 준비물, 방법, 자료 수집과 분석, 기간, 안전을 Markdown 제목과 표로 정리한다. 실제 데이터를 넣지 않는다.',
   evaluate: `다음 JSON만 출력한다. {"summary":"종합 의견","reviews":[{"criterion":"","score":null,"evidence":"","strength":"","improvement":""}]}. criterion은 다음 순서와 표기를 지킨다. ${criteria.join(' / ')}. 각각 한 번씩 쓴다. 평가 기준표가 검색되면 항목당 1~4점을 부여한다. 정보가 부족하면 score는 null로 두고 해당 평가를 보류한다. summary에는 안전 판정, 출처 유무, 점수 부여가 가능한 경우 총점과 종합 판정, 우선 수정 사항을 포함한다. 안전상 수행 불가인 실험을 승인하지 않는다.`,
   plan: '학생이 입력한 초안을 근거로 첫 단계부터 끝까지 계획에 도움이 될 AI 제안만 Markdown으로 정리한다. 학생의 원문은 복사하지 않는다. 자료 수집 전의 실험 결과는 쓰지 않는다.'
@@ -80,7 +96,8 @@ export function structuredReply(task, text) {
       if (!row) return null
       const typed = { kind }
       for (const key of ['title', 'question', 'concepts', 'reason', 'difficulty']) typed[key] = clean(row[key], 650)
-      return Object.values(typed).every(Boolean) ? typed : null
+      if (!Object.values(typed).every(Boolean)) return null
+      return { ...typed, searchQueries: normalizePaperQueries(row.searchQueries) }
     })
     return topics.every(Boolean) ? { text: summary, topics } : { text: '세 가지 탐구 주제를 모두 정리하지 못했어요. 주제 추천을 한 번 더 요청해 주세요.' }
   }

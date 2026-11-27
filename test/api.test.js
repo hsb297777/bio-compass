@@ -28,10 +28,16 @@ before(async () => {
     const slug = req.url.split('/')[6]
     if (req.method === 'DELETE') {
       threads.delete(slug)
+      upstream.emit('thread-deleted', slug)
       res.statusCode = 204
       return res.end()
     }
     const memory = threads.get(slug)
+    if (memory && body.message.includes('{"queries":[]}')) {
+      return res.end(JSON.stringify({ textResponse: JSON.stringify({
+        queries: ['UV exposure   skin cancer', 'uv exposure skin cancer', 'DNA damage repair', '한글 검색어', 'skin cancer epidemiology']
+      }) }))
+    }
     if (memory) {
       const message = body.message.split('\n')[1]
       memory.push(message)
@@ -124,4 +130,24 @@ test('a Korean inquiry plan downloads as a PDF', async () => {
   const body = Buffer.from(await result.arrayBuffer())
   assert.equal(body.subarray(0, 4).toString(), '%PDF')
   assert.ok(body.length > 1000)
+})
+
+test('paper query suggestions are deduplicated and generated outside the student chat thread', async () => {
+  const session = randomUUID()
+  const path = '/api/papers/suggestions'
+  const chat = async text => (await request('/api/chat', { task: 'chat', text }, session)).json()
+  assert.equal((await chat('나의 탐구 주제')).text, '나의 탐구 주제')
+  const deleted = once(upstream, 'thread-deleted')
+  const response = await request(path, { query: '자외선 노출과 피부암' }, session)
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), {
+    queries: ['UV exposure skin cancer', 'DNA damage repair', 'skin cancer epidemiology']
+  })
+  await deleted
+  assert.equal((await chat('계속 탐구하기')).text, '나의 탐구 주제, 계속 탐구하기')
+
+  const previousCalls = calls.length
+  const unsafe = await request(path, { query: '미확인 미생물 배양' }, session)
+  assert.deepEqual(await unsafe.json(), { queries: [] })
+  assert.equal(calls.length, previousCalls)
 })

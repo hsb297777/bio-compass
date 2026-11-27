@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { clean, input, profileMessage, buildPrompt, structuredReply, needsSafetyRedirect, safeReply, PublicError, parseObject } from './domain.js'
+import { clean, input, profileMessage, buildPrompt, structuredReply, needsSafetyRedirect, safeReply, PublicError, parseObject, normalizePaperQueries } from './domain.js'
 
 const app = express()
 const require = createRequire(import.meta.url)
@@ -279,6 +279,25 @@ async function getPapers(query, recent) {
     throw new PublicError(502, 'OpenAlex 논문 검색에 실패했어요. 잠시 후 다시 시도해 주세요.')
   }
 }
+
+app.post('/api/papers/suggestions', rate('paper-suggestions', 6, 300000), async (req, res) => {
+  sessionId(req)
+  const query = input(req.body?.query, 200)
+  if (query.length < 3 || needsSafetyRedirect(query)) return res.json({ queries: [] })
+
+  reserveAi()
+  const suggestion = {}
+  try {
+    const result = await threadReply(suggestion, buildPrompt('paperQueries', query))
+    res.json({ queries: normalizePaperQueries(parseObject(result.text)?.queries) })
+  } finally {
+    active--
+    if (suggestion.thread) {
+      const path = workspace + '/thread/' + encodeURIComponent(suggestion.thread)
+      await anything(path, 'DELETE').catch(() => {})
+    }
+  }
+})
 
 const paperLimit = rate('papers', 16, 300000)
 
