@@ -11,6 +11,7 @@ const suggestionsStatus = byId('suggestions-status')
 const suggestionCache = new Map()
 let suggestionsTimer
 let suggestionsRequest
+let selectedPaperSuggestion
 const planResults = byId('plan-results')
 const welcome = messages.firstElementChild.cloneNode(true)
 const kindNames = { literature: '문헌 탐구형', experiment: '실험 탐구형', data: '데이터 분석형' }
@@ -146,9 +147,9 @@ function addTopics(container, topics) {
   container.append(element('p', '', '관심 있는 주제에서 ‘이 주제 선택’을 누르면 논문 검색창으로 이동해요. 추천 검색어를 누르거나 검색 버튼을 눌러 논문을 찾아보세요.'))
   const group = element('div', 'topic-list')
   for (const option of topics) {
-    if (option.searchQueries?.length) {
-      suggestionCache.set(option.title.slice(0, 200).trim(), option.searchQueries)
-      suggestionCache.set(option.question.slice(0, 200).trim(), option.searchQueries)
+    if (option.searchSuggestions?.length) {
+      suggestionCache.set(option.title.slice(0, 200).trim(), option.searchSuggestions)
+      suggestionCache.set(option.question.slice(0, 200).trim(), option.searchSuggestions)
     }
     const card = element('article', 'topic')
     card.append(element('p', 'topic-kind', kindNames[option.kind]),
@@ -160,12 +161,10 @@ function addTopics(container, topics) {
     const select = element('button', 'button secondary', '이 주제 선택')
     select.type = 'button'
     select.addEventListener('click', () => {
+      if (busy) return
       topic = option.title
-      paperQuery.value = option.title.slice(0, 200)
+      openPaperSearch(option.title)
       if (!byId('plan-title').value) byId('plan-title').value = option.title.slice(0, 180)
-      panel('papers')
-      paperQuery.focus()
-      updateSuggestions(0)
     })
     card.append(select)
     group.append(card)
@@ -261,10 +260,7 @@ byId('message-form').addEventListener('submit', event => {
   const text = field.value.trim()
   if (!text || busy) return
   if (/(논문|openalex).{0,20}(찾아|검색)|(?:찾아|검색).{0,20}(논문|openalex)/i.test(text)) {
-    paperQuery.value = (text.length > 200 && topic ? topic : text).slice(0, 200)
-    panel('papers')
-    paperQuery.focus()
-    updateSuggestions(0)
+    openPaperSearch(text.length > 200 && topic ? topic : text)
     return
   }
   chat('chat', text).then(response => { if (response && field.value.trim() === text) field.value = '' })
@@ -291,6 +287,7 @@ byId('reset-chat').addEventListener('click', async () => {
     byId('question').value = ''
     clearSuggestions()
     suggestionCache.clear()
+    selectedPaperSuggestion = undefined
     paperForm.reset()
     byId('plan-form').reset()
     progress(0, true)
@@ -310,17 +307,26 @@ function clearSuggestions() {
   suggestionsStatus.textContent = ''
 }
 
-function showSuggestions(queries) {
-  suggestionsPanel.hidden = queries.length === 0
-  suggestionsStatus.textContent = queries.length ? '' : '입력한 주제로 바로 검색할 수 있어요.'
-  for (const query of queries) {
+function openPaperSearch(text) {
+  selectedPaperSuggestion = undefined
+  paperQuery.value = text.slice(0, paperQuery.maxLength)
+  searchResults.replaceChildren()
+  panel('papers')
+  paperQuery.focus()
+  updateSuggestions(0)
+}
+
+function showSuggestions(suggestions) {
+  suggestionsPanel.hidden = suggestions.length === 0
+  suggestionsStatus.textContent = suggestions.length ? '' : '입력한 주제로 바로 검색할 수 있어요.'
+  for (const suggestion of suggestions) {
     const item = element('li')
-    const button = element('button', '', query)
+    const button = element('button', '', suggestion.label)
     button.type = 'button'
-    button.lang = 'en'
     button.addEventListener('click', () => {
       if (busy) return
-      paperQuery.value = query
+      selectedPaperSuggestion = suggestion
+      paperQuery.value = suggestion.label
       paperQuery.focus()
       paperForm.requestSubmit()
     })
@@ -346,9 +352,9 @@ function updateSuggestions(delay = 800) {
     try {
       const result = await api('papers/suggestions', { query }, 'POST', request.signal).then(res => res.json())
       if (request.signal.aborted) return
-      const queries = Array.isArray(result.queries) ? result.queries : []
-      if (queries.length) suggestionCache.set(query, queries)
-      showSuggestions(queries)
+      const suggestions = Array.isArray(result.suggestions) ? result.suggestions : []
+      if (suggestions.length) suggestionCache.set(query, suggestions)
+      showSuggestions(suggestions)
     } catch {
       if (!request.signal.aborted) suggestionsStatus.textContent = '추천 검색어를 불러오지 못했어요. 현재 입력한 내용으로 검색하려면 검색 버튼을 눌러 주세요.'
     }
@@ -356,6 +362,8 @@ function updateSuggestions(delay = 800) {
 }
 
 paperQuery.addEventListener('input', event => {
+  selectedPaperSuggestion = undefined
+  searchResults.replaceChildren()
   if (!event.isComposing) updateSuggestions()
   else clearSuggestions()
 })
@@ -404,9 +412,11 @@ function addPaper(result) {
 paperForm.addEventListener('submit', async event => {
   event.preventDefault()
   if (busy) return
-  const query = paperQuery.value.trim()
-  if (!query) return
+  const displayQuery = paperQuery.value.trim()
+  if (!displayQuery) return
+  const query = selectedPaperSuggestion?.label === displayQuery ? selectedPaperSuggestion.query : displayQuery
   clearSuggestions()
+  paperQuery.readOnly = true
   setBusy(true)
   searchResults.replaceChildren(element('p', 'loading', 'OpenAlex에서 실제 논문을 찾고 있어요.'))
   try {
@@ -417,10 +427,10 @@ paperForm.addEventListener('submit', async event => {
       return
     }
     if (!response.papers.length) {
-      searchResults.append(element('p', '', '이 검색어로 찾은 논문이 없어요. 영어 핵심 단어 몇 개로 줄여 다시 검색해 보세요.'))
+      searchResults.append(element('p', '', '이 검색어로 찾은 논문이 없어요. 핵심 단어 두세 개로 줄여 다시 검색해 보세요.'))
       return
     }
-    const subtitle = `검색어 · ${response.query}${response.from ? ' / ' + response.from + ' 이후' : ''}`
+    const subtitle = `검색어 · ${displayQuery}${response.from ? ' / ' + response.from + ' 이후' : ''}`
     searchResults.append(element('p', 'metadata', subtitle))
     for (const paper of response.papers) addPaper(paper)
     progress(2)
@@ -428,6 +438,7 @@ paperForm.addEventListener('submit', async event => {
     searchResults.replaceChildren()
     showError(searchResults, error.message)
   } finally {
+    paperQuery.readOnly = false
     setBusy(false)
   }
 })

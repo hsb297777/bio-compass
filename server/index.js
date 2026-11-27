@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { clean, input, profileMessage, buildPrompt, structuredReply, needsSafetyRedirect, safeReply, PublicError, parseObject, normalizePaperQueries } from './domain.js'
+import { clean, input, profileMessage, buildPrompt, structuredReply, needsSafetyRedirect, safeReply, PublicError, parseObject, normalizePaperSuggestions } from './domain.js'
 
 const app = express()
 const require = createRequire(import.meta.url)
@@ -283,13 +283,14 @@ async function getPapers(query, recent) {
 app.post('/api/papers/suggestions', rate('paper-suggestions', 6, 300000), async (req, res) => {
   sessionId(req)
   const query = input(req.body?.query, 200)
-  if (query.length < 3 || needsSafetyRedirect(query)) return res.json({ queries: [] })
+  if (query.length < 3 || needsSafetyRedirect(query)) return res.json({ suggestions: [], queries: [] })
 
   reserveAi()
   const suggestion = {}
   try {
     const result = await threadReply(suggestion, buildPrompt('paperQueries', query))
-    res.json({ queries: normalizePaperQueries(parseObject(result.text)?.queries) })
+    const suggestions = normalizePaperSuggestions(parseObject(result.text)?.suggestions)
+    res.json({ suggestions, queries: suggestions.map(({ query }) => query) })
   } finally {
     active--
     if (suggestion.thread) {

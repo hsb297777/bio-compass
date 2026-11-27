@@ -34,9 +34,15 @@ before(async () => {
       return res.end()
     }
     const memory = threads.get(slug)
-    if (memory && body.message.includes('{"queries":[]}')) {
+    if (memory && body.message.includes('{"suggestions":[{"label":"","query":""}]}')) {
       return res.end(JSON.stringify({ textResponse: JSON.stringify({
-        queries: ['UV exposure   skin cancer', 'uv exposure skin cancer', 'DNA damage repair', '한글 검색어', 'skin cancer epidemiology']
+        suggestions: [
+          { label: '자외선 노출과 피부암', query: 'UV exposure   skin cancer' },
+          { label: '자외선의 영향', query: 'uv exposure skin cancer' },
+          { label: 'DNA 손상과 복구', query: 'DNA damage repair' },
+          { label: '사용할 수 없는 영어 검색어', query: '한글 검색어' },
+          { label: '피부암 발생 연구', query: 'skin cancer epidemiology' }
+        ]
       }) }))
     }
     if (memory) {
@@ -142,6 +148,11 @@ test('paper query suggestions are deduplicated and generated outside the student
   const response = await request(path, { query: '자외선 노출과 피부암' }, session)
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), {
+    suggestions: [
+      { label: '자외선 노출과 피부암', query: 'UV exposure skin cancer' },
+      { label: 'DNA 손상과 복구', query: 'DNA damage repair' },
+      { label: '피부암 발생 연구', query: 'skin cancer epidemiology' }
+    ],
     queries: ['UV exposure skin cancer', 'DNA damage repair', 'skin cancer epidemiology']
   })
   await deleted
@@ -149,7 +160,7 @@ test('paper query suggestions are deduplicated and generated outside the student
 
   const previousCalls = calls.length
   const unsafe = await request(path, { query: '미확인 미생물 배양' }, session)
-  assert.deepEqual(await unsafe.json(), { queries: [] })
+  assert.deepEqual(await unsafe.json(), { suggestions: [], queries: [] })
   assert.equal(calls.length, previousCalls)
 })
 
@@ -161,11 +172,11 @@ test('topic recommendations show cards without reporting an unrun OpenAlex searc
     concepts: '플라스틱과 환경',
     reason: '집에서 공개 자료를 참고할 수 있어요.',
     difficulty: '보통',
-    searchQueries: ['household microplastic exposure']
+    searchSuggestions: [{ label: '생활 속 미세플라스틱 노출', query: 'household microplastic exposure' }]
   }))
   const oldSummary = '현재 OpenAlex 검색 도구와 실제 검색 결과가 없어 논문은 확인하지 못했어요.'
   const result = structuredReply('topics', JSON.stringify({ summary: oldSummary, topics }))
   assert.equal(result.text, '')
-  assert.deepEqual(result.topics, topics)
+  assert.deepEqual(result.topics, topics.map(topic => ({ ...topic, searchQueries: ['household microplastic exposure'] })))
   assert.match(structuredReply('topics', oldSummary).text, /맞춤 탐구 시작하기/)
 })
