@@ -63,16 +63,16 @@ export function normalizePaperQueries(values) {
 }
 
 const formats = {
-  chat: '질문에 답한다. Markdown 제목과 표를 사용할 수 있다. 논문 검색이 필요하면 웹앱의 논문 검색 버튼을 안내한다.',
+  chat: '학생의 질문에 바로 답한다. 어려운 개념은 쉬운 말로 설명한다. 논문을 찾으려는 학생에게는 논문 검색 탭에서 주제를 입력하고 추천 검색어를 고르거나 검색 버튼을 누르는 방법을 안내한다.',
   paperQueries: paperQueryInstruction + ' JSON 객체만 출력한다. {"queries":[]}',
-  topics: paperQueryInstruction + ' 각 주제의 searchQueries 배열에 넣는다. 다음 JSON만 출력한다. {"summary":"학생의 여건을 바탕으로 작성한 요약","topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]}]}',
+  topics: paperQueryInstruction + ' 각 주제의 searchQueries 배열에 넣는다. 각 주제는 학생의 관심사와 여건에 맞추고 추천 이유는 학생이 이해할 수 있는 한두 문장으로 설명한다. 검색 상태, 도구 유무, 성취기준 번호를 카드에 쓰지 않는다. 다음 JSON만 출력한다. {"topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","searchQueries":[]}]}',
   design: '가설, 변인 또는 비교 기준, 준비물, 방법, 자료 수집과 분석, 기간, 안전을 Markdown 제목과 표로 정리한다. 실제 데이터를 넣지 않는다.',
   evaluate: `다음 JSON만 출력한다. {"summary":"종합 의견","reviews":[{"criterion":"","score":null,"evidence":"","strength":"","improvement":""}]}. criterion은 다음 순서와 표기를 지킨다. ${criteria.join(' / ')}. 각각 한 번씩 쓴다. 평가 기준표가 검색되면 항목당 1~4점을 부여한다. 정보가 부족하면 score는 null로 두고 해당 평가를 보류한다. summary에는 안전 판정, 출처 유무, 점수 부여가 가능한 경우 총점과 종합 판정, 우선 수정 사항을 포함한다. 안전상 수행 불가인 실험을 승인하지 않는다.`,
   plan: '학생이 입력한 초안을 근거로 첫 단계부터 끝까지 계획에 도움이 될 AI 제안만 Markdown으로 정리한다. 학생의 원문은 복사하지 않는다. 자료 수집 전의 실험 결과는 쓰지 않는다.'
 }
 
 export function buildPrompt(task, text) {
-  return `[학생이 입력한 내용]\n${text}\n\n[Compass AI 응답 형식]\n${formats[task]}\n자료 근거와 AI 제안을 분리한다. 위험한 실험 방법, 확인되지 않은 출처, 가짜 데이터는 제공하지 않는다.`
+  return `[학생이 입력한 내용]\n${text}\n\n[Compass AI 응답 형식]\n${formats[task]}\n자료 근거와 AI 제안을 분리한다. 학생에게 보이는 화면이나 도구의 연결 상태를 추측해 말하지 않는다. 주제 추천과 검색어 추천은 논문을 검색하기 전 단계다. 실제 검색의 성공, 실패 또는 결과는 확인된 정보가 있을 때만 설명한다. 위험한 실험 방법, 확인되지 않은 출처, 가짜 데이터는 제공하지 않는다.`
 }
 
 export function parseObject(text) {
@@ -88,19 +88,19 @@ export function parseObject(text) {
 export function structuredReply(task, text) {
   const raw = parseObject(text)
   if (task !== 'topics' && task !== 'evaluate') return { text }
-  if (!raw) return { text }
-  const summary = clean(raw.summary, 2000)
   if (task === 'topics') {
     const topics = ['literature', 'experiment', 'data'].map(kind => {
-      const row = Array.isArray(raw.topics) && raw.topics.find(topic => topic?.kind === kind)
+      const row = Array.isArray(raw?.topics) && raw.topics.find(topic => topic?.kind === kind)
       if (!row) return null
       const typed = { kind }
       for (const key of ['title', 'question', 'concepts', 'reason', 'difficulty']) typed[key] = clean(row[key], 650)
       if (!Object.values(typed).every(Boolean)) return null
       return { ...typed, searchQueries: normalizePaperQueries(row.searchQueries) }
     })
-    return topics.every(Boolean) ? { text: summary, topics } : { text: '세 가지 탐구 주제를 모두 정리하지 못했어요. 주제 추천을 한 번 더 요청해 주세요.' }
+    return topics.every(Boolean) ? { text: '', topics } : { text: '주제 추천을 마치지 못했어요. 맞춤 탐구 시작하기를 다시 눌러 주세요.' }
   }
+  if (!raw) return { text }
+  const summary = clean(raw.summary, 2000)
   const reviews = criteria.map(criterion => {
     const row = Array.isArray(raw.reviews) && raw.reviews.find(review => review?.criterion === criterion)
     return row && {
@@ -113,5 +113,5 @@ export function structuredReply(task, text) {
   })
   return reviews.every(row => row?.strength && row.improvement)
     ? { text: summary, reviews }
-    : { text: '평가 항목을 모두 받지 못했어요. 평가를 다시 요청해 주세요.' }
+    : { text: '계획서 평가를 마치지 못했어요. 계획서 평가 버튼을 다시 눌러 주세요.' }
 }

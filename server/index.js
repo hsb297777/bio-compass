@@ -91,14 +91,14 @@ async function anything(path, method = 'GET', body, requestTimeout = method === 
       signal: AbortSignal.timeout(requestTimeout)
     })
   } catch {
-    throw new PublicError(502, 'AnythingLLM에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.')
+    throw new PublicError(502, 'AI 서비스에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.')
   }
   if (method === 'DELETE' && (result.ok || result.status === 404)) return
-  if (!result.ok) throw new PublicError(502, 'AI 연결 또는 모델 설정을 확인해 주세요.')
+  if (!result.ok) throw new PublicError(502, 'AI 서비스가 지금 응답하지 않아요. 잠시 후 다시 시도해 주세요.')
   try {
     return await result.json()
   } catch {
-    throw new PublicError(502, 'AI 응답을 읽을 수 없어요.')
+    throw new PublicError(502, '답변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
   }
 }
 
@@ -117,7 +117,7 @@ app.get('/api/status', rate('status', 60, 60000), async (_, res) => {
 })
 
 function reserveAi() {
-  if (!enabled) throw new PublicError(503, 'Compass AI 연결 설정이 아직 필요해요. 논문 검색과 직접 작성한 계획서 PDF는 이용할 수 있어요.')
+  if (!enabled) throw new PublicError(503, '지금은 AI 대화를 사용할 수 없어요. 논문 검색과 직접 작성한 계획서 PDF 다운로드는 이용할 수 있어요.')
   const today = new Date().toISOString().slice(0, 10)
   if (today !== day) {
     day = today
@@ -159,14 +159,14 @@ async function koreanReferences(task, message) {
 async function threadReply(session, prompt) {
   if (!session.thread) {
     const made = await anything(workspace + '/thread/new', 'POST', { name: 'Bio Compass · 학생 탐구', slug: randomUUID() })
-    if (!made.thread?.slug) throw new PublicError(502, '새 대화 세션을 만들 수 없어요.')
+    if (!made.thread?.slug) throw new PublicError(502, '대화를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.')
     session.thread = made.thread.slug
   }
   const path = workspace + '/thread/' + encodeURIComponent(session.thread) + '/chat'
   const response = await anything(path, 'POST', { message: prompt, mode: 'chat' })
   const text = clean(response.textResponse, 20000)
   if (!text || response.error || response.type === 'abort') {
-    throw new PublicError(502, 'AI가 답변을 생성하지 못했어요. 모델과 키 설정을 확인해 주세요.')
+    throw new PublicError(502, 'AI 답변을 받지 못했어요. 잠시 후 다시 보내 주세요.')
   }
   const sources = Array.isArray(response.sources) ? response.sources.slice(0, 8).map(source =>
     clean(source.title || source.metadata?.title || source.source, 180)
@@ -276,7 +276,7 @@ async function getPapers(query, recent) {
     }))
     return { query, from, papers }
   } catch {
-    throw new PublicError(502, 'OpenAlex 논문 검색에 실패했어요. 잠시 후 다시 시도해 주세요.')
+    throw new PublicError(502, '논문을 불러오지 못했어요. 잠시 후 검색 버튼을 다시 눌러 주세요.')
   }
 }
 
