@@ -118,73 +118,94 @@
           <h3>나의 탐구 계획서</h3>
           <form id="plan-form">
             <p class="plan-intro">제목과 질문부터 써 보세요. 나머지 칸은 생각이 정리된 만큼 채울 수 있어요.</p>
-            <fieldset class="plan-section">
-              <legend>무엇을 알아볼까요?</legend>
-              <label for="plan-kind">탐구 유형</label>
-              <select id="plan-kind">
-                <option value="">아직 정하지 않았어요</option>
-                <option value="literature">문헌 탐구형 · 논문이나 자료 읽기</option>
-                <option value="experiment">실험 탐구형 · 직접 관찰하거나 측정하기</option>
-                <option value="data">데이터 분석형 · 공개 데이터 비교하기</option>
-              </select>
-              <label for="plan-title">탐구 제목 <small>필수</small></label>
-              <input id="plan-title" maxlength="180" placeholder="예: 빛과 무순의 발아율" required>
-              <label for="plan-question">탐구 질문 <small>필수</small></label>
-              <textarea id="plan-question" rows="2" maxlength="360" aria-describedby="plan-question-hint" required></textarea>
-              <p class="plan-hint" id="plan-question-hint">예: 빛을 받는 시간이 무순의 발아율에 어떤 영향을 줄까?</p>
-              <label for="plan-reason">이 주제를 고른 이유</label>
-              <textarea id="plan-reason" rows="2" maxlength="450" aria-describedby="plan-reason-hint"></textarea>
-              <p class="plan-hint" id="plan-reason-hint">이 질문이 떠오른 경험이나 궁금했던 이유를 적어 보세요.</p>
-            </fieldset>
+            <details class="plan-checklist">
+              <summary>평가 기준 5가지 보기</summary>
+              <ul>
+                <li><strong>교육과정 연계성</strong> 수업에서 배운 개념을 탐구 질문에 어떻게 쓰나요?</li>
+                <li><strong>과학적 정확성</strong> 개념과 예상 결과를 뒷받침하는 이유나 출처가 있나요?</li>
+                <li><strong>탐구 설계 및 검증 가능성</strong> 무엇을 비교하고 어떻게 기록하면 질문에 답할 수 있나요?</li>
+                <li><strong>실현 가능성</strong> 정해진 기간과 장소에서 준비물이나 자료를 구해 진행할 수 있나요?</li>
+                <li><strong>안전 및 윤리</strong> 안전 수칙을 지키고 출처와 개인정보를 알맞게 처리할 수 있나요?</li>
+              </ul>
+            </details>
+            <p id="plan-missing" class="plan-hint"></p>
+            <details class="plan-step" open>
+              <summary>1. 질문과 교과 연결</summary>
+              <fieldset class="plan-section" aria-label="질문과 교과 연결">
+                <label for="plan-kind">탐구 유형</label>
+                <select id="plan-kind">
+                  <option value="">아직 정하지 않았어요</option>
+                  <option value="literature">문헌 탐구형: 논문이나 자료 읽기</option>
+                  <option value="experiment">실험 탐구형: 직접 관찰하거나 측정하기</option>
+                  <option value="data">데이터 분석형: 공개 데이터 비교하기</option>
+                </select>
+                <label for="plan-title">탐구 제목 <small>필수</small></label>
+                <input id="plan-title" maxlength="180" placeholder="예: 빛과 무순의 발아율" required>
+                <label for="plan-question">탐구 질문 <small>필수</small></label>
+                <textarea id="plan-question" rows="2" maxlength="360" aria-describedby="plan-question-hint" required></textarea>
+                <p class="plan-hint" id="plan-question-hint">예: 빛을 받는 시간이 무순의 발아율에 어떤 영향을 줄까?</p>
+                <label for="plan-reason">이 주제를 고른 이유</label>
+                <textarea id="plan-reason" rows="2" maxlength="450" aria-describedby="plan-reason-hint"></textarea>
+                <p class="plan-hint" id="plan-reason-hint">이 질문이 떠오른 경험이나 궁금했던 이유를 적어 보세요.</p>
+                <label for="plan-curriculum">수업에서 배운 개념과 연결</label>
+                <textarea id="plan-curriculum" rows="2" maxlength="300" aria-describedby="plan-curriculum-hint plan-curriculum-suggest"></textarea>
+                <p class="plan-hint" id="plan-curriculum-hint">과목이나 단원 이름과, 배운 개념을 이번 질문에 어떻게 쓸지 적어 보세요.</p>
+                <p class="plan-curriculum-suggest" id="plan-curriculum-suggest" hidden></p>
+              </fieldset>
+            </details>
 
-            <fieldset class="plan-section">
-              <legend>어떻게 알아볼까요?</legend>
-              <label for="plan-expectation" id="plan-expectation-label">예상 결과 또는 가설</label>
-              <textarea id="plan-expectation" rows="2" maxlength="450" aria-describedby="plan-expectation-hint"></textarea>
-              <p class="plan-hint" id="plan-expectation-hint">어떤 차이가 있을 것 같나요? 그렇게 생각한 이유도 한 줄 적어 보세요.</p>
-              <div id="plan-standard-group">
-                <label for="plan-standard">비교할 대상과 기준</label>
-                <textarea id="plan-standard" rows="2" maxlength="500" aria-describedby="plan-standard-hint"></textarea>
-                <p class="plan-hint" id="plan-standard-hint">어떤 두 대상을 비교하고, 무엇을 같거나 다르다고 판단할지 적어 보세요.</p>
-              </div>
-              <div id="plan-variables" class="plan-variables" hidden>
-                <div>
-                  <label for="plan-independent">바꿀 조건 <small>독립 변인</small></label>
-                  <input id="plan-independent" maxlength="180" placeholder="예: 하루에 빛을 받는 시간">
+            <details class="plan-step">
+              <summary>2. 비교 기준과 방법</summary>
+              <fieldset class="plan-section" aria-label="비교 기준과 방법">
+                <label for="plan-expectation" id="plan-expectation-label">예상 결과 또는 가설</label>
+                <textarea id="plan-expectation" rows="2" maxlength="450" aria-describedby="plan-expectation-hint"></textarea>
+                <p class="plan-hint" id="plan-expectation-hint">어떤 차이가 있을 것 같나요? 그렇게 생각한 이유도 한 줄 적어 보세요.</p>
+                <div id="plan-standard-group">
+                  <label for="plan-standard">비교할 대상과 기준</label>
+                  <textarea id="plan-standard" rows="2" maxlength="500" aria-describedby="plan-standard-hint"></textarea>
+                  <p class="plan-hint" id="plan-standard-hint">어떤 두 대상을 비교하고, 무엇을 같거나 다르다고 판단할지 적어 보세요.</p>
                 </div>
-                <div>
-                  <label for="plan-dependent">측정할 결과 <small>종속 변인</small></label>
-                  <input id="plan-dependent" maxlength="180" placeholder="예: 싹이 난 씨앗의 비율">
+                <div id="plan-variables" class="plan-variables" hidden>
+                  <div>
+                    <label for="plan-independent">바꿀 조건 <small>독립 변인</small></label>
+                    <input id="plan-independent" maxlength="180" placeholder="예: 하루에 빛을 받는 시간">
+                  </div>
+                  <div>
+                    <label for="plan-dependent">측정할 결과 <small>종속 변인</small></label>
+                    <input id="plan-dependent" maxlength="180" placeholder="예: 싹이 난 씨앗의 비율">
+                  </div>
+                  <div>
+                    <label for="plan-controlled">같게 둘 조건 <small>통제 변인</small></label>
+                    <input id="plan-controlled" maxlength="220" placeholder="예: 씨앗 종류, 물의 양, 온도">
+                  </div>
                 </div>
-                <div>
-                  <label for="plan-controlled">같게 둘 조건 <small>통제 변인</small></label>
-                  <input id="plan-controlled" maxlength="220" placeholder="예: 씨앗 종류, 물의 양, 온도">
-                </div>
-              </div>
-              <label for="plan-material" id="plan-material-label">준비물 또는 참고 자료</label>
-              <textarea id="plan-material" rows="2" maxlength="600" aria-describedby="plan-material-hint"></textarea>
-              <p class="plan-hint" id="plan-material-hint">사용할 도구나 자료 이름을 적어 보세요.</p>
-              <label for="plan-method">진행 순서</label>
-              <textarea id="plan-method" rows="4" maxlength="1200" aria-describedby="plan-method-hint"></textarea>
-              <p class="plan-hint" id="plan-method-hint">처음 할 일부터 차례대로 한 줄씩 적어 보세요.</p>
-            </fieldset>
+                <label for="plan-material" id="plan-material-label">준비물 또는 참고 자료</label>
+                <textarea id="plan-material" rows="2" maxlength="600" aria-describedby="plan-material-hint"></textarea>
+                <p class="plan-hint" id="plan-material-hint">사용할 도구나 자료 이름을 적어 보세요.</p>
+                <label for="plan-method">진행 순서</label>
+                <textarea id="plan-method" rows="2" maxlength="1200" aria-describedby="plan-method-hint"></textarea>
+                <p class="plan-hint" id="plan-method-hint">처음 할 일부터 차례대로 한 줄씩 적어 보세요.</p>
+              </fieldset>
+            </details>
 
-            <fieldset class="plan-section">
-              <legend>무엇을 기록하고 확인할까요?</legend>
-              <label for="plan-analysis">기록할 내용과 비교 방법</label>
-              <textarea id="plan-analysis" rows="3" maxlength="850" aria-describedby="plan-analysis-hint"></textarea>
-              <p class="plan-hint" id="plan-analysis-hint">무엇을 언제 기록할지, 표나 그래프로 어떻게 비교할지 써 보세요.</p>
-              <label for="plan-schedule">일정</label>
-              <textarea id="plan-schedule" rows="2" maxlength="300" aria-describedby="plan-schedule-hint"></textarea>
-              <p class="plan-hint" id="plan-schedule-hint">예: 1일 차 준비, 2~6일 차 관찰, 7일 차 그래프와 결론 정리</p>
-              <label for="plan-safety">안전과 자료 사용에서 주의할 점</label>
-              <textarea id="plan-safety" rows="2" maxlength="500" aria-describedby="plan-safety-hint"></textarea>
-              <p class="plan-hint" id="plan-safety-hint">선생님께 확인할 점이나, 자료 출처와 개인정보 처리 방법을 적어 보세요.</p>
-            </fieldset>
+            <details class="plan-step">
+              <summary>3. 기록, 일정과 안전</summary>
+              <fieldset class="plan-section" aria-label="기록, 일정과 안전">
+                <label for="plan-analysis">기록할 내용과 비교 방법</label>
+                <textarea id="plan-analysis" rows="2" maxlength="850" aria-describedby="plan-analysis-hint"></textarea>
+                <p class="plan-hint" id="plan-analysis-hint">무엇을 언제 기록할지, 표나 그래프로 어떻게 비교할지 써 보세요.</p>
+                <label for="plan-schedule">일정</label>
+                <textarea id="plan-schedule" rows="2" maxlength="300" aria-describedby="plan-schedule-hint"></textarea>
+                <p class="plan-hint" id="plan-schedule-hint">예: 1일 차 준비, 2~6일 차 관찰, 7일 차 그래프와 결론 정리</p>
+                <label for="plan-safety">안전과 자료 사용에서 주의할 점</label>
+                <textarea id="plan-safety" rows="2" maxlength="500" aria-describedby="plan-safety-hint"></textarea>
+                <p class="plan-hint" id="plan-safety-hint">선생님께 확인할 점이나, 자료 출처와 개인정보 처리 방법을 적어 보세요.</p>
+              </fieldset>
+            </details>
             <div class="actions">
               <button type="button" class="button secondary" data-plan-task="design">설계 도움받기</button>
               <button type="button" class="button secondary" data-plan-task="evaluate">계획서 평가</button>
-              <button type="button" class="button secondary" data-plan-task="plan">AI 제안 정리</button>
+              <button type="button" class="button secondary" data-plan-task="plan">계획 보완하기</button>
               <button type="submit" class="button primary" id="pdf-button">PDF 다운로드</button>
             </div>
           </form>

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { curriculumForPrompt, curriculumStandard } from './curriculum.js'
 
 export const workspacePrompt = readFileSync(new URL('./workspace-prompt.md', import.meta.url), 'utf8')
 export const places = ['학교 과학실', '집에서 간단한 실험', '컴퓨터 분석만']
@@ -70,14 +71,17 @@ export function normalizePaperSuggestions(values) {
 const formats = {
   chat: '학생의 질문에 바로 답한다. 어려운 개념은 쉬운 말로 설명한다. 논문을 찾으려는 학생에게는 논문 검색 탭에서 주제를 입력하고 추천 검색어를 고르거나 검색 버튼을 누르는 방법을 안내한다.',
   paperQueries: paperQueryInstruction + ' JSON 객체만 출력한다. {"suggestions":[{"label":"","query":""}]}',
-  topics: paperQueryInstruction + ' 각 주제의 searchSuggestions 배열에 넣는다. 각 주제는 학생의 관심사와 여건에 맞추고 추천 이유는 학생이 이해할 수 있는 한두 문장으로 설명한다. 검색 상태, 도구 유무, 성취기준 번호를 카드에 쓰지 않는다. 다음 JSON만 출력한다. {"topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","searchSuggestions":[{"label":"","query":""}]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","searchSuggestions":[{"label":"","query":""}]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","searchSuggestions":[{"label":"","query":""}]}]}',
-  design: '가설, 변인 또는 비교 기준, 준비물, 방법, 자료 수집과 분석, 기간, 안전을 Markdown 제목과 표로 정리한다. 실제 데이터를 넣지 않는다.',
-  evaluate: `다음 JSON만 출력한다. {"summary":"종합 의견","reviews":[{"criterion":"","score":null,"evidence":"","strength":"","improvement":""}]}. criterion은 다음 순서와 표기를 지킨다. ${criteria.join(' / ')}. 각각 한 번씩 쓴다. 평가 기준표가 검색되면 항목당 1~4점을 부여한다. 정보가 부족하면 score는 null로 두고 해당 평가를 보류한다. summary에는 안전 판정, 출처 유무, 점수 부여가 가능한 경우 총점과 종합 판정, 우선 수정 사항을 포함한다. 안전상 수행 불가인 실험을 승인하지 않는다.`,
-  plan: '학생이 입력한 초안을 근거로 첫 단계부터 끝까지 계획에 도움이 될 AI 제안만 Markdown으로 정리한다. 학생의 원문은 복사하지 않는다. 자료 수집 전의 실험 결과는 쓰지 않는다.'
+  topics: paperQueryInstruction + ' 각 주제의 searchSuggestions 배열에 넣는다. 각 주제는 학생의 관심사와 여건에 맞추고 추천 이유는 학생이 이해할 수 있는 한두 문장으로 설명한다. 카드의 자유 문장에는 검색 상태, 도구 유무, 성취기준 번호를 쓰지 않는다. 과제에 직접 맞는 성취기준 하나를 curriculum 객체의 code와 reason에 담는다. 다음 JSON만 출력한다. {"topics":[{"kind":"literature","title":"","question":"","concepts":"","reason":"","difficulty":"","curriculum":{"code":"","reason":""},"searchSuggestions":[{"label":"","query":""}]},{"kind":"experiment","title":"","question":"","concepts":"","reason":"","difficulty":"","curriculum":{"code":"","reason":""},"searchSuggestions":[{"label":"","query":""}]},{"kind":"data","title":"","question":"","concepts":"","reason":"","difficulty":"","curriculum":{"code":"","reason":""},"searchSuggestions":[{"label":"","query":""}]}]}',
+  design: '가설, 변인 또는 비교 기준, 준비물, 방법, 자료 수집과 분석, 기간, 안전을 Markdown 제목과 표로 정리한다. 실제 데이터를 넣지 않는다. 제목에 AI 제안이라는 표시를 붙이지 않는다.',
+  evaluate: `다음 JSON만 출력한다. {"summary":"종합 의견","curriculum":{"code":"","reason":""},"reviews":[{"criterion":"","score":null,"evidence":"","strength":"","improvement":""}]}. criterion은 다음 순서와 표기를 지킨다. ${criteria.join(' / ')}. 각각 한 번씩 쓴다. 평가 기준표가 검색되면 항목당 1~4점을 부여한다. 학생이 연결할 교과 개념과 이유를 쓰지 않았으면 교육과정 연계성은 null로 두고 curriculum에서 어울리는 기준을 제안한다. 정보가 부족한 다른 항목도 score는 null로 두고, 잘한 점이나 개선 방향에는 초안에 실제로 있는 내용과 다음에 무엇을 적어야 할지를 구분해 쓴다. summary에는 안전 판정, 출처 유무, 점수 부여가 가능한 경우 총점과 종합 판정, 우선 수정 사항을 포함한다. 안전상 수행 불가인 실험을 승인하지 않는다.`,
+  plan: '학생이 입력한 초안을 근거로 첫 단계부터 끝까지 계획에 도움이 될 AI 제안만 Markdown으로 정리한다. 학생의 원문은 복사하지 않는다. 자료 수집 전의 실험 결과는 쓰지 않는다. 화면이 이미 AI 제안이라고 표시하므로 본문 제목 앞이나 뒤에 AI 제안이라고 덧붙이지 않는다.'
 }
 
 export function buildPrompt(task, text) {
-  return `[학생이 입력한 내용]\n${text}\n\n[Compass AI 응답 형식]\n${formats[task]}\n자료 근거와 AI 제안을 분리한다. 학생에게 보이는 화면이나 도구의 연결 상태를 추측해 말하지 않는다. 주제 추천과 검색어 추천은 논문을 검색하기 전 단계다. 실제 검색의 성공, 실패 또는 결과는 확인된 정보가 있을 때만 설명한다. 위험한 실험 방법, 확인되지 않은 출처, 가짜 데이터는 제공하지 않는다.`
+  const curriculum = task === 'topics' || task === 'evaluate'
+    ? '\n[성취기준 목록] 아래 목록에서 실제 탐구 질문에 직접 맞는 것 하나를 고른다. 단지 같은 과목이라는 이유만으로 고르지 않는다. 고1은 통합과학을 먼저 검토하고 생명과학은 선택 과목이라고 안내한다. 맞는 기준이 없으면 code와 reason을 빈 문자열로 둔다. reason에는 이 탐구에서 해당 개념을 어떻게 적용하는지 한 문장으로 쓴다.\n' + curriculumForPrompt
+    : ''
+  return `[학생이 입력한 내용]\n${text}\n\n[Compass AI 응답 형식]\n${formats[task]}${curriculum}\n자료 근거와 AI 제안을 분리한다. 학생에게 보이는 화면이나 도구의 연결 상태를 추측해 말하지 않는다. 주제 추천과 검색어 추천은 논문을 검색하기 전 단계다. 실제 검색의 성공, 실패 또는 결과는 확인된 정보가 있을 때만 설명한다. 위험한 실험 방법, 확인되지 않은 출처, 가짜 데이터는 제공하지 않는다.`
 }
 
 export function parseObject(text) {
@@ -88,6 +92,21 @@ export function parseObject(text) {
   } catch {
     return null
   }
+}
+
+function curriculumMatch(value) {
+  const reference = curriculumStandard(value?.code)
+  const reason = clean(value?.reason, 450)
+  return reference && reason ? { ...reference, reason } : null
+}
+
+export function paperReading(note, hasAbstract) {
+  if (!note) return null
+  const relevance = clean(note.relevance, 450)
+  if (!relevance) return null
+  const fit = hasAbstract && ['direct', 'background', 'skip'].includes(note.fit) ? note.fit : 'check'
+  const use = fit === 'direct' || fit === 'background' ? clean(note.use, 450) : ''
+  return { fit, relevance, use, caution: clean(note.caution, 450) }
 }
 
 export function structuredReply(task, text) {
@@ -101,7 +120,8 @@ export function structuredReply(task, text) {
       for (const key of ['title', 'question', 'concepts', 'reason', 'difficulty']) typed[key] = clean(row[key], 650)
       if (!Object.values(typed).every(Boolean)) return null
       const searchSuggestions = normalizePaperSuggestions(row.searchSuggestions)
-      return { ...typed, searchSuggestions, searchQueries: searchSuggestions.map(({ query }) => query) }
+      const curriculum = curriculumMatch(row.curriculum)
+      return { ...typed, searchSuggestions, searchQueries: searchSuggestions.map(({ query }) => query), ...(curriculum && { curriculum }) }
     })
     return topics.every(Boolean) ? { text: '', topics } : { text: '주제 추천을 마치지 못했어요. 맞춤 탐구 시작하기를 다시 눌러 주세요.' }
   }
@@ -117,7 +137,8 @@ export function structuredReply(task, text) {
       improvement: clean(row.improvement, 1500)
     }
   })
+  const curriculum = curriculumMatch(raw.curriculum)
   return reviews.every(row => row?.strength && row.improvement)
-    ? { text: summary, reviews }
+    ? { text: summary, reviews, ...(curriculum && { curriculum }) }
     : { text: '계획서 평가를 마치지 못했어요. 계획서 평가 버튼을 다시 눌러 주세요.' }
 }
