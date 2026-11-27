@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="고등학생을 위한 생명과학 탐구 설계 파트너">
+  <meta name="theme-color" content="#f8f6ef">
+  <title>Bio Compass — 생명과학 탐구 설계</title>
+  <link rel="icon" href="/compass.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/markdown.js" defer></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">탐구 화면으로 이동</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="wordmark" href="/" aria-label="Bio Compass 홈"><img src="/compass.svg" alt="" width="42" height="42"><span>Bio Compass</span></a>
+      <a class="header-link" href="#workspace">탐구실</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <p class="eyebrow">DISCOVER <span>·</span> EXPLORE <span>·</span> UNDERSTAND</p>
+        <h1 id="hero-title">작은 호기심에서,<br>새로운 발견으로.</h1>
+        <p class="hero-description">나만의 질문을 발견하고 과학적 탐구로 발전시켜 보세요.</p>
+        <a class="button primary hero-cta" href="#profile">탐구 시작하기</a>
+      </div>
+      <img class="hero-art" src="/specimen.svg" width="596" height="351" alt="잎의 잎맥, DNA 이중나선과 세포 구조를 푸른 선으로 그린 과학 삽화">
+    </section>
+    <nav class="progress" aria-label="탐구 진행 단계">
+      <ol id="steps">
+        <li aria-current="step"><span>01</span>관심사 발견</li>
+        <li><span>02</span>주제 탐색</li>
+        <li><span>03</span>논문 검색</li>
+        <li><span>04</span>탐구 설계</li>
+        <li><span>05</span>계획서 완성</li>
+      </ol>
+    </nav>
+    <div class="workspace" id="workspace">
+      <section class="card profile" id="profile" aria-labelledby="profile-title">
+        <div class="panel-title">
+          <h2 id="profile-title">나의 탐구 프로필</h2>
+          <p>관심사와 탐구 여건을 알려 주세요.</p>
+        </div>
+        <form id="profile-form" autocomplete="off">
+          <label for="grade">학년</label>
+          <select id="grade" name="grade" required><option value="">학년 선택</option><option>고1</option><option>고2</option><option>고3</option></select>
+          <label for="career">진로 희망 분야</label>
+          <input id="career" name="career" type="text" maxlength="100" placeholder="예: 환경공학, 보건, 생명과학" required>
+          <label for="interests">최근 관심사 및 키워드</label>
+          <input id="interests" name="interests" type="text" maxlength="240" placeholder="예: 빛과 식물의 관계" required>
+          <div class="keywords" aria-label="추천 키워드">
+            <button type="button" class="chip">식물 생장</button><button type="button" class="chip">생태계</button>
+            <button type="button" class="chip">유전</button><button type="button" class="chip">항상성</button><button type="button" class="chip">기후 변화</button>
+          </div>
+          <fieldset>
+            <legend>탐구 장소 <small>복수 선택</small></legend>
+            <label class="check"><input type="checkbox" name="place" value="학교 과학실">학교 과학실</label>
+            <label class="check"><input type="checkbox" name="place" value="집에서 간단한 실험">집에서 간단한 실험</label>
+            <label class="check"><input type="checkbox" name="place" value="컴퓨터 분석만">컴퓨터 분석만</label>
+          </fieldset>
+          <label for="period">탐구 기간</label>
+          <select id="period" name="period" required><option value="">기간 선택</option><option>1~2주</option><option>한 달</option><option>한 학기</option></select>
+          <p class="privacy">이름, 학교, 연락처는 입력하지 마세요.</p>
+          <p class="error" id="profile-error" role="alert" hidden></p>
+          <button type="submit" class="button primary wide" id="profile-submit">맞춤 탐구 시작하기</button>
+          <button type="reset" class="text-button wide">프로필 초기화</button>
+        </form>
+      </section>
+      <section class="card compass" aria-labelledby="chat-title">
+        <div class="chat-header">
+          <img src="/compass.svg" alt="" width="42" height="42">
+          <div><h2 id="chat-title">Compass AI</h2><p>당신의 생명과학 탐구 파트너</p></div>
+          <span class="status" id="connection" role="status">연결 확인 중</span>
+        </div>
+        <div class="tabs" role="group" aria-label="탐구 도구">
+          <button class="tab" type="button" data-panel="chat" aria-pressed="true">대화</button>
+          <button class="tab" type="button" data-panel="papers" aria-pressed="false">논문 검색</button>
+          <button class="tab" type="button" data-panel="plan" aria-pressed="false">계획서·평가</button>
+        </div>
+        <div id="chat" class="pane">
+          <div class="messages" id="messages" role="log" aria-label="탐구 대화" aria-live="polite" tabindex="0">
+            <div class="welcome"><h3>어떤 질문에서 시작할까요?</h3><p>프로필을 입력해 주제를 추천받거나, 이미 떠오른 질문을 아래에 적어 보세요.</p></div>
+          </div>
+          <p id="loading" class="loading" role="status" hidden>Compass AI가 답변을 준비하고 있어요.</p>
+          <form id="message-form" class="composer">
+            <label class="visually-hidden" for="question">Compass AI에게 물어보기</label>
+            <textarea id="question" name="question" rows="2" maxlength="6500" placeholder="궁금한 점을 적어 보세요." required></textarea>
+            <div class="composer-actions">
+              <button type="button" class="text-button" id="reset-chat">대화 초기화</button>
+              <button type="submit" class="button primary" id="send">메시지 전송</button>
+            </div>
+          </form>
+        </div>
+        <div id="papers" class="pane task-pane" hidden>
+          <h3>OpenAlex 논문 검색</h3>
+          <form id="search-form">
+            <label for="paper-query">탐구 주제 또는 검색어</label>
+            <div class="field-row">
+              <input id="paper-query" maxlength="200" placeholder="예: radish germination light" required>
+              <button class="button primary" id="search-button" type="submit">검색</button>
+            </div>
+            <label class="check recent"><input type="checkbox" id="recent">최근 5년 논문만</label>
+          </form>
+          <div class="paper-results" id="search-results" aria-live="polite"></div>
+        </div>
+        <div id="plan" class="pane task-pane" hidden>
+          <h3>나의 탐구 계획서</h3>
+          <form id="plan-form">
+            <label for="plan-title">탐구 제목</label>
+            <input id="plan-title" maxlength="180" placeholder="예: 빛에 따른 무순의 발아율 비교" required>
+            <label for="plan-body">학생이 직접 작성한 내용</label>
+            <textarea id="plan-body" rows="8" maxlength="6500" placeholder="탐구 질문, 가설, 비교 기준 또는 변인, 방법, 일정과 안전 점검을 적어 주세요." required></textarea>
+            <div class="actions">
+              <button type="button" class="button secondary" data-plan-task="design">설계 도움받기</button>
+              <button type="button" class="button secondary" data-plan-task="evaluate">계획서 평가</button>
+              <button type="button" class="button secondary" data-plan-task="plan">AI 제안 정리</button>
+              <button type="submit" class="button primary" id="pdf-button">PDF 다운로드</button>
+            </div>
+          </form>
+          <div id="plan-results" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer><div class="wrap">BIO COMPASS — Every discovery begins with a question.</div></footer>
+</body>
+</html>
