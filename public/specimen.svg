@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 596 351" fill="none">
+  <defs>
+    <pattern id="paper" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".5" fill="#6686a5" opacity=".23"/></pattern>
+    <pattern id="hatch" width="5" height="5" patternTransform="rotate(35)" patternUnits="userSpaceOnUse"><path d="M0 0v5" stroke="#7f9ab5" stroke-width=".45"/></pattern>
+    <pattern id="fine" width="3" height="3" patternTransform="rotate(-32)" patternUnits="userSpaceOnUse"><path d="M0 0v3" stroke="#284f7b" stroke-width=".27"/></pattern>
+    <path id="leaf" d="M82 286C104 253 115 211 132 164c17-47 52-83 117-121 17-10 32-17 47-30-5 24-4 48-5 68-2 55-14 91-43 119-45 44-111 37-154 70z"/>
+    <clipPath id="leafClip"><use href="#leaf"/></clipPath>
+  </defs>
+  <rect x="51" y="8" width="506" height="317" rx="6" fill="url(#paper)"/>
+  <g stroke="#8da8bf" stroke-width=".75">
+    <circle cx="277" cy="167" r="138" stroke-dasharray="2 5"/>
+    <circle cx="277" cy="167" r="115" opacity=".6"/>
+    <path d="M67 40h34M67 40v34m474 219h-34m34 0v-34M107 291h123m106 0h124M275 20v292m-149-145h302" opacity=".55"/>
+    <path d="M367 85h106m-220 156H114m310 15h70" stroke-dasharray="3 4"/>
+    <circle cx="365" cy="85" r="2.6"/><circle cx="252" cy="241" r="2.6"/><circle cx="423" cy="256" r="2.6"/>
+  </g>
+  <g transform="translate(24 8)">
+    <use href="#leaf" fill="#edf1ed" stroke="#315982" stroke-width="1.5"/>
+    <path d="M93 269c36-67 96-88 151-134 21-18 39-52 53-121-40 43-84 62-127 103-39 37-50 111-77 152z" fill="url(#hatch)" clip-path="url(#leafClip)"/>
+    <g stroke="#50769b" stroke-width=".85" clip-path="url(#leafClip)">
+      <path d="M115 239c43-36 87-11 151-68M130 219c45-30 92-18 151-73M147 198c39-27 78-17 142-78M165 180c32-28 70-17 127-83M186 161c37-28 67-25 111-85M209 144c36-28 59-39 88-87M232 123c19-22 45-39 68-82M253 98c14-20 29-38 48-76"/>
+      <path d="M115 240c15-45 13-56 31-99M129 220c17-49 17-69 32-106M146 199c16-48 17-72 32-102M164 181c14-40 19-76 36-102M186 162c11-27 16-63 35-99M209 143c11-31 16-62 34-91M231 124c7-26 20-54 36-85M251 101c7-22 18-43 35-71"/>
+    </g>
+    <g stroke="#234f77">
+      <path d="M72 307c30-27 32-53 68-99 33-42 89-66 118-115 15-25 23-50 39-79" stroke-width="2.2"/>
+      <path d="M94 276c22-30 23-53 47-81" stroke-width=".7"/>
+    </g>
+  </g>
+  <g transform="translate(357 24) rotate(13 65 92)" stroke="#365f89" stroke-width="1.1">
+    <path d="M35 2c125 30-63 57 61 87S33 143 113 168M95 2C-17 33 158 59 35 89s61 54-9 79" stroke-width="2"/>
+    <path d="M44 5h42M60 11h11M40 32h54M32 39h68M37 46h58M50 53h32m-42 20h57M34 80h71M34 87h69M44 95h45m-38 24h32m-51 8h70m-74 8h76m-65 8h53m-45 17h47"/>
+    <path d="M30 167c7-7 24-15 38-23 31-18 54-42 31-50" stroke="#8da8bf" opacity=".6"/>
+  </g>
+  <g transform="translate(356 199)">
+    <path d="M10 52C6 29 33 12 58 17c24 4 35 5 48 26 9 14-1 45-31 51C48 99 15 79 10 52z" fill="#e4ecf2" stroke="#426d94" stroke-width="1.35"/>
+    <path d="M15 50C12 30 38 16 61 22c23 5 32 6 42 22 7 12-3 39-29 45C50 94 19 75 15 50z" fill="url(#fine)" stroke="#6e8ca9" stroke-width=".7"/>
+    <ellipse cx="56" cy="53" rx="21" ry="17" transform="rotate(18 56 53)" fill="#d5e2ef" stroke="#426d94"/>
+    <ellipse cx="58" cy="53" rx="7" ry="6" fill="#9fb7cd" stroke="#426d94" stroke-width=".8"/>
+    <g stroke="#456d94" stroke-width=".8">
+      <path d="M24 38c8-12 16-11 14-7l-13 9m59 5c14 6 15 13 9 13-5 0-14-9-9-13zm-53 14c-10-2-5 9 4 11 7 2 4-8-4-11zm37 14c7-7 20-8 17-3-3 6-18 9-17 3z"/>
+      <path d="M45 27c4-2 9-1 13 1m22 7 7 4m-39 36 12 5m-38-31 4 5m44-20 6 6"/>
+    </g>
+  </g>
+  <g fill="#547592" font-family="Georgia, serif" font-size="10" letter-spacing="1.5">
+    <text x="60" y="31">BOTANICA</text><text x="472" y="84">DNA</text><text x="464" y="256">CELLULA</text>
+  </g>
+  <g stroke="#6385a4" stroke-width=".8"><path d="M478 306h40m-40-3v6m40-6v6M78 124h16m-8-8v16m425 20h12m-6-6v12M312 306h16m-8-8v16"/></g>
+</svg>
